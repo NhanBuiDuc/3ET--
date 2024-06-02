@@ -37,12 +37,14 @@ class SpikingNet:
     
     def custom_activation(self, x):
         # Apply ReLU to the first two dimensions
-        x[:, :2] = tf.nn.relu(x[:, :2])
+        x_first_two_relu = tf.nn.relu(x[:, :2])
         # Apply sigmoid to the last dimension
-        x[:, 2] = tf.nn.sigmoid(x[:, 2])
+        x_last_sigmoid = tf.nn.sigmoid(x[:, 2])
         # Round the values of the last dimension to either 0 or 1
-        x[:, 2] = tf.round(x[:, 2])
-        return x
+        x_last_rounded = tf.round(x_last_sigmoid)
+        # Concatenate the modified dimensions
+        modified_x = tf.concat([x_first_two_relu, tf.expand_dims(x_last_rounded, axis=1)], axis=1)
+        return modified_x
     
     def build_model(self):
         with nengo.Network(seed=0) as net:
