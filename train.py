@@ -172,7 +172,7 @@ if __name__ == "__main__":
     # val_x = val_data_orig.inputs
     # val_y = val_data_orig.targets
     # model = train(model, sim, out_p, train_loader, val_loader, args)
-    train == true
+    train == True
     if train:
         sim.compile(
             optimizer=tf.optimizers.RMSprop(0.001),
