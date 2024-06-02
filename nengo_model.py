@@ -35,16 +35,16 @@ class SpikingNet:
         self.x = 60
         self.y = 80
     
-    def custom_activation(self, x):
-        # Apply ReLU to the first two dimensions
-        x_first_two_relu = tf.nn.relu(x[:, :2])
-        # Apply sigmoid to the last dimension
-        x_last_sigmoid = tf.nn.sigmoid(x[:, 2])
-        # Round the values of the last dimension to either 0 or 1
-        x_last_rounded = tf.round(x_last_sigmoid)
-        # Concatenate the modified dimensions
-        modified_x = tf.concat([x_first_two_relu, tf.expand_dims(x_last_rounded, axis=1)], axis=1)
-        return modified_x
+    # def custom_activation(self, x):
+    #     # Apply ReLU to the first two dimensions
+    #     x_first_two_relu = tf.nn.relu(x[:, :2])
+    #     # Apply sigmoid to the last dimension
+    #     x_last_sigmoid = tf.nn.sigmoid(x[:, 2])
+    #     # Round the values of the last dimension to either 0 or 1
+    #     x_last_rounded = tf.round(x_last_sigmoid)
+    #     # Concatenate the modified dimensions
+    #     modified_x = tf.concat([x_first_two_relu, tf.expand_dims(x_last_rounded, axis=1)], axis=1)
+    #     return modified_x
     
     def build_model(self):
         with nengo.Network(seed=0) as net:
@@ -61,9 +61,9 @@ class SpikingNet:
             x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=128, strides=2, kernel_size=3))(x, shape_in=(28, 38, 64))
             x = nengo_dl.Layer(self.neuron_type)(x)
             
-            # Last dense layer with custom activation
-            out = nengo_dl.Layer(tf.keras.layers.Dense(units=100, activation=tf.nn.relu))(x)
-            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.relu))(out)
+            # # Last dense layer with custom activation
+            # out = nengo_dl.Layer(tf.keras.layers.Dense(units=100, activation=tf.nn.relu))(x)
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.relu))(x)
             out_p = nengo.Probe(out, label="out_p")
             out_p_filt = nengo.Probe(out, synapse=0.1, label="out_p_filt")
             
