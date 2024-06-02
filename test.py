@@ -15,7 +15,88 @@ from dataset import ThreeETplus_Eyetracking, ScaleLabel, NormalizeLabel, \
     EventSlicesToVoxelGrid, SliceByTimeEventsTargets
 import tonic.transforms as transforms
 from tonic import SlicedDataset, DiskCachedDataset
+from nengo_model import SpikingNet
+import pandas as pd
+import numpy as np
+import nengo_dl
+import tensorflow as tf
 
+def p_acc(target, prediction, pixel_tolerances=[1,3,5,10]):
+    """
+    Calculate the accuracy of prediction
+    :param target: (N, seq_len, 2) tensor, seq_len could be 1
+    :param prediction: (N, seq_len, 2) tensor
+    :return: a dictionary of p-total correct and batch size of this batch
+    """
+    # flatten the N and seqlen dimension of target and prediction
+    target = target.reshape(-1, 2)
+    prediction = prediction.reshape(-1, 2)
+
+    dis = target - prediction
+    dist = torch.norm(dis, dim=-1)
+
+    total_correct = {}
+    for p_tolerance in pixel_tolerances:
+        total_correct[f'p{p_tolerance}'] = torch.sum(dist < p_tolerance)
+
+    bs_times_seqlen = target.shape[0]
+    return total_correct, bs_times_seqlen
+
+def px_euclidean_dist(target, prediction):
+    """
+    Calculate the total pixel euclidean distance between target and prediction
+    in a batch over the sequence length
+    :param target: (N, seqlen, 2) tensor
+    :param prediction: (N, seqlen, 2) tensor
+    :return: total pixel euclidean distance and sample numbers
+    """
+    # flatten the N and seqlen dimension of target and prediction
+    target = target.reshape(-1, 2)[:, :2]
+    prediction = prediction.reshape(-1, 2)
+
+    dis = target - prediction
+    dist = torch.norm(dis, dim=-1)
+    total_px_euclidean_dist = torch.sum(dist)
+    sample_numbers = target.shape[0]
+    return total_px_euclidean_dist, sample_numbers
+
+def px_manhaten_dist(target, prediction):
+    """
+    Calculate the total pixel manhaten distance between target and prediction
+    in a batch over the sequence length
+    :param target: (N, seqlen, 2) tensor
+    :param prediction: (N, seqlen, 2) tensor
+    :return: total pixel manhaten distance and sample numbers
+    """
+    # flatten the N and seqlen dimension of target and prediction
+    target = target.reshape(-1, 2)[:, :2]
+    prediction = prediction.reshape(-1, 2)
+    dis = target - prediction
+    dist = torch.sum(torch.abs(dis), dim=-1)
+    total_px_manhaten_dist = torch.sum(dist)
+    sample_numbers = target.shape[0]
+    return total_px_manhaten_dist, sample_numbers
+
+def calculate_metrics(gt_df, predictions_df):
+    # Convert the dataframes into PyTorch tensors
+    gt_tensor = torch.tensor(gt_df[['x', 'y']].values, dtype=torch.float32)
+    predictions_tensor = torch.tensor(predictions_df[['x', 'y']].values, dtype=torch.float32)
+
+    # Calculate pixel tolerated accuracy
+    total_correct, sample_size = p_acc(gt_tensor, predictions_tensor, pixel_tolerances=[1,3,5,10,15])
+    # enumerate the tolerances and print the accuracy
+    print("p_acc:", end=" ")
+    for p_tolerance, correct in total_correct.items():
+        print(f'{p_tolerance}={correct.item() / sample_size:.2%}', end=", ")
+    print()
+    # calculate the px_euclidean_dist
+    total_px_euclidean_dist, sample_size = px_euclidean_dist(gt_tensor, predictions_tensor)
+    print(f'px_euclidean_dist: {total_px_euclidean_dist.item() / sample_size:.2f}')
+
+    # calculate the px_manhaten_dist
+    total_px_manhaten_dist, sample_size = px_manhaten_dist(gt_tensor, predictions_tensor)
+    print(f'px_manhaten_dist: {total_px_manhaten_dist.item() / sample_size:.2f}')
+    
 
 def main(args):
     # Load hyperparameters from JSON configuration file
@@ -35,8 +116,15 @@ def main(args):
     #     json.dump(vars(args), f)
 
     # Define your model, optimizer, and criterion
-    model = eval(args.architecture)(args).to(args.device)
-
+    model, inp, out_p, out_p_filt = SpikingNet().build_model()
+    minibatch_size = 64
+    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
+    sim.compile(
+        optimizer=tf.optimizers.RMSprop(0.001),
+        loss={out_p: tf.losses.SparseCategoricalCrossentropy(from_logits=True)},
+    )
+    # load parameters
+    sim.load_params("./best")
     # test data loader always cuts the event stream with the labeling frequency
     factor = args.spatial_factor
     temp_subsample_factor = args.temporal_subsample_factor
@@ -94,8 +182,11 @@ def main(args):
         row_id = 0
         for batch_idx, (data, target_placeholder) in enumerate(test_loader):
             data = data.to(args.device)
-            output = model(data)
-
+            output = sim.predict(data)
+            out_p_tensor = output[out_p]
+            out_p_tensor = tf.constant(out_p_tensor)
+            out_p_filt_tensor = output[out_p_filt]
+            out_p_filt_tensor = tf.constant(out_p_filt_tensor)            
             # Important! 
             # cast the output back to the downsampled sensor space (80x60)
             output = output * torch.tensor((640*factor, 480*factor)).to(args.device)
@@ -108,7 +199,23 @@ def main(args):
                     csv_writer.writerow(row_to_write)
                     row_id += 1
 
+    gt_df = pd.read_csv('./gt_orig_merged.csv')
 
+    # iterate over csv files in a directory
+    folder = './your_submissions/'
+    files = os.listdir(folder)
+    # remove the files that contains null
+    files = [file for file in files if 'null' not in file]
+    # sort files by the Priv_ score
+    sort_files = sorted(files, key=lambda x: float(x.split('_')[-1].split('.')[0]), reverse=True)
+    for filename in sort_files:
+        if filename.endswith(".csv"):
+            print(filename)
+            predictions_df = pd.read_csv(os.path.join(folder, filename))
+
+            calculate_metrics(gt_df, predictions_df)
+        else:
+            continue
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
