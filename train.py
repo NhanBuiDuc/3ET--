@@ -2,7 +2,6 @@ import argparse
 import json
 import os
 
-from sympy import false, true
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
