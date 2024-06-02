@@ -62,8 +62,8 @@ class SpikingNet:
             x = nengo_dl.Layer(self.neuron_type)(x)
             
             # Last dense layer with custom activation
-            out = nengo_dl.Layer(tf.keras.layers.Dense(units=100, activation=tf.nn.relu()))(x)
-            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.relu()))(out)
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=100, activation=tf.nn.relu))(x)
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.relu))(out)
             out_p = nengo.Probe(out, label="out_p")
             out_p_filt = nengo.Probe(out, synapse=0.1, label="out_p_filt")
             
