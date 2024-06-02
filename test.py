@@ -116,8 +116,8 @@ def main(args):
     #     json.dump(vars(args), f)
 
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = SpikingNet().build_model()
-    minibatch_size = 64
+    model, inp, out_p, out_p_filt = SpikingNet(n_time_bins = args.n_time_bins).build_model()
+    minibatch_size = 1
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
         optimizer=tf.optimizers.RMSprop(0.001),

@@ -128,7 +128,7 @@ if __name__ == "__main__":
     device = "cuda"
     
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = SpikingNet().build_model()
+    model, inp, out_p, out_p_filt = SpikingNet(n_time_bins = args.n_time_bins).build_model()
     minibatch_size = 64
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
