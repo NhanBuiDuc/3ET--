@@ -1,0 +1,6 @@
+/.vscode
+/best.npz
+/cached_dataset
+/metadata
+/__pycache__/*
+/event_data/*
