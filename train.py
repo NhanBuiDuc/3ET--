@@ -202,15 +202,15 @@ if __name__ == "__main__":
                     tf.keras.losses.MeanAbsoluteError(),
                     tf.keras.losses.MeanSquaredError()
                 ],
-                # out_p_filt: [                    
-                #     p1_accuracy,
-                #     p3_accuracy,
-                #     p5_accuracy,
-                #     p10_accuracy,
-                #     p15_accuracy,
-                #     tf.keras.losses.MeanAbsoluteError(),
-                #     tf.keras.losses.MeanSquaredError()
-                # ]
+                out_p_filt: [                    
+                    p1_accuracy,
+                    p3_accuracy,
+                    p5_accuracy,
+                    p10_accuracy,
+                    p15_accuracy,
+                    tf.keras.losses.MeanAbsoluteError(),
+                    tf.keras.losses.MeanSquaredError()
+                ]
             }
         )
 
