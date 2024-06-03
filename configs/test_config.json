@@ -10,6 +10,6 @@
     "sensor_height": 480,
     "test_stride": 30,
     "test_length": 30,
-    "n_time_bins": 3,
+    "n_time_bins": 1,
     "voxel_grid_ch_normaization": false
 }

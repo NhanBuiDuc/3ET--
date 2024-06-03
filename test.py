@@ -116,7 +116,7 @@ def main(args):
     #     json.dump(vars(args), f)
 
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = SpikingNet(n_time_bins = args.n_time_bins).build_model()
+    model, inp, out_p, out_p_filt = SpikingNet().build_model()
     minibatch_size = 1
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
@@ -167,48 +167,141 @@ def main(args):
     # This is only used in combination of include_incomplete=True during testing
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False, \
                             num_workers=int(os.cpu_count()-2))
+    accumulated_batches = []
+    accumulated_targets = []
+    
+    with open("submission_probe.csv", 'w', newline='') as csvfile_probe, open("submission_probe_filt.csv", 'w', newline='') as csvfile_probe_filt:
+        csv_writer_probe = csv.writer(csvfile_probe, delimiter=',')
+        csv_writer_probe_filt = csv.writer(csvfile_probe_filt, delimiter=',')
+        
+        csv_writer_probe.writerow(['row_id', 'x', 'y'])
+        csv_writer_probe_filt.writerow(['row_id', 'x', 'y'])
+        
+        row_id = 0
 
+        for batch_idx, (data, target_placeholder) in enumerate(test_loader):
+            data = data.to(args.device)
+            accumulated_batches.append(data)
+            accumulated_targets.append(target_placeholder)
+            
+            if len(accumulated_batches) == minibatch_size:
+                stacked_data = torch.cat(accumulated_batches)
+                tf_data = tf.constant(stacked_data.cpu().detach().numpy())
+                tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
+                
+                output = sim.predict(tf_data)
+                out_probe = output[out_p]
+                out_probe_filt = output[out_p_filt]
+
+                out_probe[..., 0] *= 640 * factor
+                out_probe[..., 1] *= 480 * factor
+
+                out_probe_filt[..., 0] *= 640 * factor
+                out_probe_filt[..., 1] *= 480 * factor
+
+                for sample in range(minibatch_size):
+                    for frame_id in range(target_placeholder.shape[1]):
+                        row_to_write_probe = out_probe[sample][frame_id]
+                        row_to_write_probe = np.insert(row_to_write_probe, 0, row_id)
+                        csv_writer_probe.writerow(row_to_write_probe)
+                        
+                        row_to_write_probe_filt = out_probe_filt[sample][frame_id]
+                        row_to_write_probe_filt = np.insert(row_to_write_probe_filt, 0, row_id)
+                        csv_writer_probe_filt.writerow(row_to_write_probe_filt)
+                        
+                        row_id += 1
+
+                # Clear the accumulated batches
+                accumulated_batches = []
+                accumulated_targets = []
+
+        # If there are remaining batches that didn't reach the minibatch size
+        if len(accumulated_batches) > 0:
+            stacked_data = torch.cat(accumulated_batches)
+            tf_data = tf.constant(stacked_data.cpu().detach().numpy())
+            tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
+            
+            output = sim.predict(tf_data)
+            out_probe = output[out_p]
+            out_probe_filt = output[out_p_filt]
+
+            out_probe[..., 0] *= 640 * factor
+            out_probe[..., 1] *= 480 * factor
+
+            out_probe_filt[..., 0] *= 640 * factor
+            out_probe_filt[..., 1] *= 480 * factor
+
+            for sample in range(len(accumulated_batches)):
+                for frame_id in range(target_placeholder.shape[1]):
+                    row_to_write_probe = out_probe[sample][frame_id]
+                    row_to_write_probe = np.insert(row_to_write_probe, 0, row_id)
+                    csv_writer_probe.writerow(row_to_write_probe)
+                    
+                    row_to_write_probe_filt = out_probe_filt[sample][frame_id]
+                    row_to_write_probe_filt = np.insert(row_to_write_probe_filt, 0, row_id)
+                    csv_writer_probe_filt.writerow(row_to_write_probe_filt)
+                    
+                    row_id += 1
     # load weights from a checkpoint
     # if args.checkpoint:
     #     model.load_state_dict(torch.load(args.checkpoint))
     # else:
     #     raise ValueError("Please provide a checkpoint file.")
-    
+    # scaling_factor_torch = torch.tensor((640, 480))
+    # scaling_factor_tf = tf.constant((640, 480))
     # evaluate on the validation set and save the predictions into a csv file.
-    with open(args.output_path, 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile, delimiter=',')
-        # add column names 'row_id', 'x', 'y'
-        csv_writer.writerow(['row_id', 'x', 'y'])
-        row_id = 0
-        for batch_idx, (data, target_placeholder) in enumerate(test_loader):
-            data = data.to(args.device)
-            output = sim.predict(data)
-            out_p_tensor = output[out_p]
-            out_p_tensor = tf.constant(out_p_tensor)
-            out_p_filt_tensor = output[out_p_filt]
-            out_p_filt_tensor = tf.constant(out_p_filt_tensor)            
-            # Important! 
-            # cast the output back to the downsampled sensor space (80x60)
-            output = output * torch.tensor((640*factor, 480*factor)).to(args.device)
+    # with open(args.output_path, 'w', newline='') as csvfile:
+    #     csv_writer = csv.writer(csvfile, delimiter=',')
+    #     # add column names 'row_id', 'x', 'y'
+    #     csv_writer.writerow(['row_id', 'x', 'y'])
+    #     row_id = 0
+    #     for batch_idx, (data, target_placeholder) in enumerate(test_loader):
+    #         data = data.to(args.device)
+    #         tf_data = tf.constant(data.cpu().detach().numpy())
+    #         tf_data = tf.reshape(tf_data, [tf_data.shape[0] , tf_data.shape[1] * tf_data.shape[2], -1])
+    #         output = sim.predict(tf_data)
+    #         out_probe = output[out_p]
+    #         out_probe_filt = output[out_p_filt]
+    #         # Multiplying the first two elements in the last dimension for out_probe
+    #         out_probe[..., 0] *= 640 * factor
+    #         out_probe[..., 1] *= 480 * factor
 
-            for sample in range(target_placeholder.shape[0]):
-                for frame_id in range(target_placeholder.shape[1]):
-                    row_to_write = output[sample][frame_id].tolist()
-                    # prepend the row_id
-                    row_to_write.insert(0, row_id)
-                    csv_writer.writerow(row_to_write)
-                    row_id += 1
+    #         # Multiplying the first two elements in the last dimension for out_probe_filt
+    #         out_probe_filt[..., 0] *= 640 * factor
+    #         out_probe_filt[..., 1] *= 480 * factor
+    #         # out_p_tftensor = tf.constant(out_probe)
+    #         # out_p_tftensor = tf.multiply(out_p_tftensor, scaling_factor_tf).numpy()
+
+    #         # out_p_filt_tftensor = tf.constant(out_probe_filt)
+    #         # out_p_filt_tftensor = tf.multiply(out_p_filt_tftensor, scaling_factor_tf).numpy()
+
+    #         # out_p_torchtensor = torch.tensor(out_probe)
+    #         # out_p_torchtensor = torch.mul(out_p_torchtensor, scaling_factor_torch)
+
+    #         # out_p_filt_torchtensor = torch.tensor(out_probe)
+    #         # out_p_filt_torchtensor = torch.mul(out_p_filt_torchtensor, scaling_factor_torch)      
+    #         # Important! 
+    #         # cast the output back to the downsampled sensor space (80x60)
+    #         # output = output * torch.tensor((640*factor, 480*factor)).to(args.device)
+
+    #         for sample in range(target_placeholder.shape[0]):
+    #             for frame_id in range(target_placeholder.shape[1]):
+    #                 row_to_write = out_probe[sample][frame_id]
+    #                 # prepend the row_id
+    #                 row_to_write = np.insert(row_to_write, 0, row_id)
+    #                 csv_writer.writerow(row_to_write)
+    #                 row_id += 1
 
     gt_df = pd.read_csv('./gt_orig_merged.csv')
 
     # iterate over csv files in a directory
-    folder = './your_submissions/'
+    folder = './my_submissions/'
     files = os.listdir(folder)
     # remove the files that contains null
     files = [file for file in files if 'null' not in file]
     # sort files by the Priv_ score
-    sort_files = sorted(files, key=lambda x: float(x.split('_')[-1].split('.')[0]), reverse=True)
-    for filename in sort_files:
+    # sort_files = sorted(files, key=lambda x: float(x.split('_')[-1].split('.')[0]), reverse=True)
+    for filename in files:
         if filename.endswith(".csv"):
             print(filename)
             predictions_df = pd.read_csv(os.path.join(folder, filename))

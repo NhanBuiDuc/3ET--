@@ -2,6 +2,8 @@ import argparse
 import json
 import os
 
+from sympy import false
+
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -128,8 +130,8 @@ if __name__ == "__main__":
     device = "cuda"
     
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = SpikingNet(n_time_bins = args.n_time_bins).build_model()
-    minibatch_size = 64
+    model, inp, out_p, out_p_filt = SpikingNet().build_model()
+    minibatch_size = 4
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
         optimizer=tf.optimizers.RMSprop(0.001),
@@ -169,10 +171,12 @@ if __name__ == "__main__":
     # val_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="test", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=val_slicer, post_slicer_transform = post_slicer_transform)
     train_x = train_data_orig.inputs
     train_y = train_data_orig.targets
+    print(len(train_x))
+    print(len(train_y))
     # val_x = val_data_orig.inputs
     # val_y = val_data_orig.targets
     # model = train(model, sim, out_p, train_loader, val_loader, args)
-    train == True
+    train = False
     if train:
         sim.compile(
             optimizer=tf.optimizers.RMSprop(0.001),
@@ -216,78 +220,77 @@ if __name__ == "__main__":
     else:
         # load parameters
         sim.load_params("./best")  
-    # #Assuming test_images and test_labels are your test data
-    # evaluation_results = sim.evaluate(val_x, {out_p_filt: val_y}, verbose=1)
-    # print("Val loss:", evaluation_results['loss'])
-    # print("P loss:", evaluation_results['out_p_loss'])
-    # # print("P1 Accuracy:", evaluation_results['out_p_p1_accuracy'])
-    # # print("P3 Accuracy:", evaluation_results['out_p_p3_accuracy'])
-    # # print("P5 Accuracy:", evaluation_results['out_p_p5_accuracy'])
-    # # print("P10 Accuracy:", evaluation_results['out_p_p10_accuracy'])
-    # # print("P15 Accuracy:", evaluation_results['out_p_p15_accuracy'])
-    # # print("Mean Absolute Error:", evaluation_results['out_p_mean_absolute_error'])
-    # # print("Mean Squared Error:", evaluation_results['out_p_mean_squared_error'])
-    # num_samples = len(val_x)
-    # batch_size = 8  # You can adjust the batch size if needed
+        #Assuming test_images and test_labels are your test data
+        # evaluation_results = sim.evaluate(val_x, {out_p_filt: val_y}, verbose=1)
+        # print("Val loss:", evaluation_results['loss'])
+        # print("P loss:", evaluation_results['out_p_loss'])
+        # print("P1 Accuracy:", evaluation_results['out_p_p1_accuracy'])
+        # print("P3 Accuracy:", evaluation_results['out_p_p3_accuracy'])
+        # print("P5 Accuracy:", evaluation_results['out_p_p5_accuracy'])
+        # print("P10 Accuracy:", evaluation_results['out_p_p10_accuracy'])
+        # print("P15 Accuracy:", evaluation_results['out_p_p15_accuracy'])
+        # print("Mean Absolute Error:", evaluation_results['out_p_mean_absolute_error'])
+        # print("Mean Squared Error:", evaluation_results['out_p_mean_squared_error'])
+        num_samples = len(train_x)
 
-    # total_loss = 0.0
-    # total_p_loss = 0.0
-    # total_p1_accuracy = 0.0
-    # total_p3_accuracy = 0.0
-    # total_p5_accuracy = 0.0
-    # total_p10_accuracy = 0.0
-    # total_p15_accuracy = 0.0
-    
-    # total_p1_accuracy_filt = 0.0
-    # total_p3_accuracy_filt = 0.0
-    # total_p5_accuracy_filt = 0.0
-    # total_p10_accuracy_filt = 0.0
-    # total_p15_accuracy_filt = 0.0
-    # total_mean_absolute_error = 0.0
-    # total_mean_squared_error = 0.0
+        # total_loss = 0.0
+        # total_p_loss = 0.0
+        # total_p1_accuracy = 0.0
+        # total_p3_accuracy = 0.0
+        # total_p5_accuracy = 0.0
+        # total_p10_accuracy = 0.0
+        # total_p15_accuracy = 0.0
+        
+        # total_p1_accuracy_filt = 0.0
+        # total_p3_accuracy_filt = 0.0
+        # total_p5_accuracy_filt = 0.0
+        # total_p10_accuracy_filt = 0.0
+        # total_p15_accuracy_filt = 0.0
+        # total_mean_absolute_error = 0.0
+        # total_mean_squared_error = 0.0
 
-    # for i in range(0, num_samples, batch_size):
+        for i in range(0, num_samples, minibatch_size):
 
-    #     batch_x = val_x[i:i+batch_size]
-    #     batch_y = val_y[i:i+batch_size]
-    #     if len(batch_x) >= batch_size:
-    #         pred = sim.predict(batch_x)
-    #         # for index, out in enumerate(pred):
-    #         #     if out.label == "out_p":
-    #         #         out_p = sim.tf_tensor(out)
-    #         #     out_p_filt = sim.tf_tensor(out)
-    #         out_p_tensor = pred[out_p]
-    #         out_p_tensor = tf.constant(out_p_tensor)
-    #         out_p_filt_tensor = pred[out_p_filt]
-    #         out_p_filt_tensor = tf.constant(out_p_filt_tensor)
-    #         total_p1_accuracy += p1_accuracy(batch_y, out_p_tensor).numpy()
-    #         total_p3_accuracy += p3_accuracy(batch_y, out_p_tensor).numpy()
-    #         total_p5_accuracy += p5_accuracy(batch_y, out_p_tensor).numpy()
-    #         total_p10_accuracy += p10_accuracy(batch_y, out_p_tensor).numpy()
-    #         total_p15_accuracy += p15_accuracy(batch_y, out_p_tensor).numpy()
+            batch_x = train_x[i:i+minibatch_size]
+            batch_y = train_y[i:i+minibatch_size]
+            if len(batch_x) >= minibatch_size:
+                pred = sim.predict(batch_x)
+                out_probe = pred[out_p]
+                out_probe_filt = pred[out_p_filt]
 
-    #         total_p1_accuracy_filt += p1_accuracy(batch_y, out_p_filt_tensor).numpy()
-    #         total_p3_accuracy_filt += p3_accuracy(batch_y, out_p_filt_tensor).numpy()
-    #         total_p5_accuracy_filt += p5_accuracy(batch_y, out_p_filt_tensor).numpy()
-    #         total_p10_accuracy_filt += p10_accuracy(batch_y, out_p_filt_tensor).numpy()
-    #         total_p15_accuracy_filt += p15_accuracy(batch_y, out_p_filt_tensor).numpy()
-    # # Calculate averages
-    # avg_loss = total_loss / num_samples
-    # avg_p_loss = total_p_loss / num_samples
-    # avg_p1_accuracy = total_p1_accuracy / num_samples
-    # avg_p3_accuracy = total_p3_accuracy / num_samples
-    # avg_p5_accuracy = total_p5_accuracy / num_samples
-    # avg_p10_accuracy = total_p10_accuracy / num_samples
-    # avg_p15_accuracy = total_p15_accuracy / num_samples
-    # avg_mean_absolute_error = total_mean_absolute_error / num_samples
-    # avg_mean_squared_error = total_mean_squared_error / num_samples
+                # out_probe[..., 0] *= 640 * factor
+                # out_probe[..., 1] *= 480 * factor
 
-    # # print("Average Val loss:", avg_loss)
-    # # print("Average P loss:", avg_p_loss)
-    # print("Average P1 Accuracy:", avg_p1_accuracy)
-    # print("Average P3 Accuracy:", avg_p3_accuracy)
-    # print("Average P5 Accuracy:", avg_p5_accuracy)
-    # print("Average P10 Accuracy:", avg_p10_accuracy)
-    # print("Average P15 Accuracy:", avg_p15_accuracy)
-    # # print("Average Mean Absolute Error:", avg_mean_absolute_error)
-    # # print("Average Mean Squared Error:", avg_mean_squared_error)
+                # out_probe_filt[..., 0] *= 640 * factor
+                # out_probe_filt[..., 1] *= 480 * factor
+                # total_p1_accuracy += p1_accuracy(batch_y, out_p_tensor).numpy()
+                # total_p3_accuracy += p3_accuracy(batch_y, out_p_tensor).numpy()
+                # total_p5_accuracy += p5_accuracy(batch_y, out_p_tensor).numpy()
+                # total_p10_accuracy += p10_accuracy(batch_y, out_p_tensor).numpy()
+                # total_p15_accuracy += p15_accuracy(batch_y, out_p_tensor).numpy()
+
+                # total_p1_accuracy_filt += p1_accuracy(batch_y, out_p_filt_tensor).numpy()
+                # total_p3_accuracy_filt += p3_accuracy(batch_y, out_p_filt_tensor).numpy()
+                # total_p5_accuracy_filt += p5_accuracy(batch_y, out_p_filt_tensor).numpy()
+                # total_p10_accuracy_filt += p10_accuracy(batch_y, out_p_filt_tensor).numpy()
+                # total_p15_accuracy_filt += p15_accuracy(batch_y, out_p_filt_tensor).numpy()
+        # # Calculate averages
+        # avg_loss = total_loss / num_samples
+        # avg_p_loss = total_p_loss / num_samples
+        # avg_p1_accuracy = total_p1_accuracy / num_samples
+        # avg_p3_accuracy = total_p3_accuracy / num_samples
+        # avg_p5_accuracy = total_p5_accuracy / num_samples
+        # avg_p10_accuracy = total_p10_accuracy / num_samples
+        # avg_p15_accuracy = total_p15_accuracy / num_samples
+        # avg_mean_absolute_error = total_mean_absolute_error / num_samples
+        # avg_mean_squared_error = total_mean_squared_error / num_samples
+
+        # # print("Average Val loss:", avg_loss)
+        # # print("Average P loss:", avg_p_loss)
+        # print("Average P1 Accuracy:", avg_p1_accuracy)
+        # print("Average P3 Accuracy:", avg_p3_accuracy)
+        # print("Average P5 Accuracy:", avg_p5_accuracy)
+        # print("Average P10 Accuracy:", avg_p10_accuracy)
+        # print("Average P15 Accuracy:", avg_p15_accuracy)
+        # # print("Average Mean Absolute Error:", avg_mean_absolute_error)
+        # # print("Average Mean Squared Error:", avg_mean_squared_error)

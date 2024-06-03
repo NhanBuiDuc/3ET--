@@ -65,6 +65,6 @@ class SpikingNet:
             # x = nengo_dl.Layer(tf.keras.layers.Dense(units=100, activation=tf.nn.relu))(x)
             out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.relu))(x)
             out_p = nengo.Probe(out, label="out_p")
-            out_p_filt = nengo.Probe(out, synapse=0.01, label="out_p_filt")
+            out_p_filt = nengo.Probe(out, synapse=0.001, label="out_p_filt")
             
             return net, inp, out_p, out_p_filt
