@@ -89,8 +89,8 @@ class SpikingNet:
             x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=128, strides=2, kernel_size=3))(x, shape_in=(28, 38, 64))
             x = nengo_dl.Layer(self.neuron_type)(x)
             
-            x = nengo_dl.Layer(tf.keras.layers.BatchNormalization())(x)
-            x = nengo_dl.Layer(tf.keras.layers.Dropout(0.2))(x)
+            # x = nengo_dl.Layer(tf.keras.layers.BatchNormalization())(x)
+            # x = nengo_dl.Layer(tf.keras.layers.Dropout(0.2))(x)
             
             out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.relu))(x)
             out_p = nengo.Probe(out, label="out_p")
