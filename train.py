@@ -131,7 +131,7 @@ if __name__ == "__main__":
     
     # Define your model, optimizer, and criterion
     model, inp, out_p, out_p_filt = SpikingNet().build_model()
-    minibatch_size = 4
+    minibatch_size = 1
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
         optimizer=tf.optimizers.RMSprop(0.001),
