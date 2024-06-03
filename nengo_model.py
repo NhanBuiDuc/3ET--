@@ -82,11 +82,11 @@ class SpikingNet:
             # nengo_dl.configure_settings(stateful=False)
             
             inp = nengo.Node(np.zeros(self.x * self.y))
-            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=32, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(0.01)))(inp, shape_in=(self.x, self.y, 1))
+            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=32, kernel_size=3))(inp, shape_in=(self.x, self.y, 1))
             x = nengo_dl.Layer(self.neuron_type)(x)
-            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=64, strides=2, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(0.01)))(x, shape_in=(58, 78, 32))
+            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=64, strides=2, kernel_size=3))(x, shape_in=(58, 78, 32))
             x = nengo_dl.Layer(self.neuron_type)(x)
-            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=128, strides=2, kernel_size=3, kernel_regularizer=tf.keras.regularizers.l2(0.01)))(x, shape_in=(28, 38, 64))
+            x = nengo_dl.Layer(tf.keras.layers.Conv2D(filters=128, strides=2, kernel_size=3))(x, shape_in=(28, 38, 64))
             x = nengo_dl.Layer(self.neuron_type)(x)
             
             x = nengo_dl.Layer(tf.keras.layers.BatchNormalization())(x)
