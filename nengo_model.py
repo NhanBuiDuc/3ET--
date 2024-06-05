@@ -77,7 +77,7 @@ class TestNet:
             
             conv1_transform = nengo.Convolution(
 
-                n_filters=64,
+                n_filters=128,
 
                 input_shape=self.input_shape,
 
@@ -88,7 +88,7 @@ class TestNet:
             )
             conv2_transform = nengo.Convolution(
 
-                n_filters=128,
+                n_filters=248,
 
                 input_shape=conv1_transform.output_shape.shape,
 
@@ -99,7 +99,7 @@ class TestNet:
             )
             conv3_transform = nengo.Convolution(
 
-                n_filters=256,
+                n_filters=496,
 
                 input_shape=conv2_transform.output_shape.shape,
 
