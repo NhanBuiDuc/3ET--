@@ -114,11 +114,11 @@ def main(args):
     # # also dump the args to a JSON file in MLflow artifact
     # with open(os.path.join(mlflow.get_artifact_uri(), "args.json"), 'w') as f:
     #     json.dump(vars(args), f)
-
+    device = "/gpu:4"
     # Define your model, optimizer, and criterion
     model, inp, out_p, out_p_filt = TestNet().build_model()
     minibatch_size = 1
-    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
+    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
     sim.compile(
         optimizer=tf.optimizers.RMSprop(0.001),
         loss={out_p: tf.losses.SparseCategoricalCrossentropy(from_logits=True)},
@@ -178,13 +178,45 @@ def main(args):
         csv_writer_probe_filt.writerow(['row_id', 'x', 'y'])
         
         row_id = 0
+        with tf.device(device):
+            for batch_idx, (data, target_placeholder) in enumerate(test_loader):
+                data = data.to(args.device)
+                accumulated_batches.append(data)
+                accumulated_targets.append(target_placeholder)
+                
+                if len(accumulated_batches) == minibatch_size:
+                    stacked_data = torch.cat(accumulated_batches)
+                    tf_data = tf.constant(stacked_data.cpu().detach().numpy())
+                    tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
+                    
+                    output = sim.predict(tf_data)
+                    out_probe = output[out_p]
+                    out_probe_filt = output[out_p_filt]
 
-        for batch_idx, (data, target_placeholder) in enumerate(test_loader):
-            data = data.to(args.device)
-            accumulated_batches.append(data)
-            accumulated_targets.append(target_placeholder)
-            
-            if len(accumulated_batches) == minibatch_size:
+                    out_probe[..., 0] *= 640 * factor
+                    out_probe[..., 1] *= 480 * factor
+
+                    out_probe_filt[..., 0] *= 640 * factor
+                    out_probe_filt[..., 1] *= 480 * factor
+
+                    for sample in range(minibatch_size):
+                        for frame_id in range(target_placeholder.shape[1]):
+                            row_to_write_probe = out_probe[sample][frame_id]
+                            row_to_write_probe = np.insert(row_to_write_probe, 0, row_id)
+                            csv_writer_probe.writerow(row_to_write_probe)
+                            
+                            row_to_write_probe_filt = out_probe_filt[sample][frame_id]
+                            row_to_write_probe_filt = np.insert(row_to_write_probe_filt, 0, row_id)
+                            csv_writer_probe_filt.writerow(row_to_write_probe_filt)
+                            
+                            row_id += 1
+
+                    # Clear the accumulated batches
+                    accumulated_batches = []
+                    accumulated_targets = []
+
+            # If there are remaining batches that didn't reach the minibatch size
+            if len(accumulated_batches) > 0:
                 stacked_data = torch.cat(accumulated_batches)
                 tf_data = tf.constant(stacked_data.cpu().detach().numpy())
                 tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
@@ -199,7 +231,7 @@ def main(args):
                 out_probe_filt[..., 0] *= 640 * factor
                 out_probe_filt[..., 1] *= 480 * factor
 
-                for sample in range(minibatch_size):
+                for sample in range(len(accumulated_batches)):
                     for frame_id in range(target_placeholder.shape[1]):
                         row_to_write_probe = out_probe[sample][frame_id]
                         row_to_write_probe = np.insert(row_to_write_probe, 0, row_id)
@@ -210,38 +242,6 @@ def main(args):
                         csv_writer_probe_filt.writerow(row_to_write_probe_filt)
                         
                         row_id += 1
-
-                # Clear the accumulated batches
-                accumulated_batches = []
-                accumulated_targets = []
-
-        # If there are remaining batches that didn't reach the minibatch size
-        if len(accumulated_batches) > 0:
-            stacked_data = torch.cat(accumulated_batches)
-            tf_data = tf.constant(stacked_data.cpu().detach().numpy())
-            tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
-            
-            output = sim.predict(tf_data)
-            out_probe = output[out_p]
-            out_probe_filt = output[out_p_filt]
-
-            out_probe[..., 0] *= 640 * factor
-            out_probe[..., 1] *= 480 * factor
-
-            out_probe_filt[..., 0] *= 640 * factor
-            out_probe_filt[..., 1] *= 480 * factor
-
-            for sample in range(len(accumulated_batches)):
-                for frame_id in range(target_placeholder.shape[1]):
-                    row_to_write_probe = out_probe[sample][frame_id]
-                    row_to_write_probe = np.insert(row_to_write_probe, 0, row_id)
-                    csv_writer_probe.writerow(row_to_write_probe)
-                    
-                    row_to_write_probe_filt = out_probe_filt[sample][frame_id]
-                    row_to_write_probe_filt = np.insert(row_to_write_probe_filt, 0, row_id)
-                    csv_writer_probe_filt.writerow(row_to_write_probe_filt)
-                    
-                    row_id += 1
     # load weights from a checkpoint
     # if args.checkpoint:
     #     model.load_state_dict(torch.load(args.checkpoint))
