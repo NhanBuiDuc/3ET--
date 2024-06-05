@@ -161,7 +161,8 @@ class ThreeETplus_EyetrackingDataset:
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         slicer: Optional[Callable] = None,
-        post_slicer_transform = None
+        post_slicer_transform = None,
+        device = "cuda"
     ):
         self.split = split
         self.data_dir = data_dir
@@ -171,6 +172,7 @@ class ThreeETplus_EyetrackingDataset:
         self.target_transform = target_transform
         self.slicer = slicer
         self.post_slicer_transform = post_slicer_transform
+        self.device = device
         # Load all data and labels into memory
         self.train_x, self.train_y, self.val_x, self.val_y, self.test_x, self.test_y = self.load_data()
     def __len__(self):
@@ -211,18 +213,20 @@ class ThreeETplus_EyetrackingDataset:
         val_x, test_x, val_y, test_y = train_test_split(val_x, val_y, test_size=0.3, random_state=42)
             # print(events.shape)
             # print(target.shape)
-        train_x =  tf.constant(train_x)
-        train_x = tf.reshape(train_x, [train_x.shape[0] , train_x.shape[1] * train_x.shape[2], -1])
+        # Convert to TensorFlow tensors and reshape if necessary, specifying device
+        with tf.device(self.device):  # Specify the desired device here
+            train_x =  tf.constant(train_x)
+            train_x = tf.reshape(train_x, [train_x.shape[0] , train_x.shape[1] * train_x.shape[2], -1])
 
-        val_x =  tf.constant(val_x)
-        val_x = tf.reshape(val_x, [val_x.shape[0] , val_x.shape[1] * val_x.shape[2], -1])
+            val_x =  tf.constant(val_x)
+            val_x = tf.reshape(val_x, [val_x.shape[0] , val_x.shape[1] * val_x.shape[2], -1])
 
-        train_y =  tf.constant(train_y)
+            train_y =  tf.constant(train_y)
 
-        val_y =  tf.constant(val_y)
+            val_y =  tf.constant(val_y)
 
-        test_x =  tf.constant(test_x)
-        test_x = tf.reshape(test_x, [test_x.shape[0] , test_x.shape[1] * test_x.shape[2], -1])
+            test_x =  tf.constant(test_x)
+            test_x = tf.reshape(test_x, [test_x.shape[0] , test_x.shape[1] * test_x.shape[2], -1])
 
-        test_y =  tf.constant(test_y)
+            test_y =  tf.constant(test_y)
         return train_x, train_y, val_x, val_y, test_x, test_y

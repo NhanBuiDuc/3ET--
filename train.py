@@ -127,12 +127,12 @@ if __name__ == "__main__":
     with open(os.path.join('./configs', config_file), 'r') as f:
         config = json.load(f)
     args = argparse.Namespace(**config)
-    device = "cuda"
+    device = "/gpu:4"
     
     # Define your model, optimizer, and criterion
     model, inp, out_p, out_p_filt = TestNet().build_model()
     minibatch_size = 3
-    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device="/gpu:4")
+    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
 
     factor = args.spatial_factor  # spatial downsample factor
     temp_subsample_factor = args.temporal_subsample_factor  # downsampling original 100Hz label to 20Hz
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         seq_stride=args.val_stride, 
         include_incomplete=False
     )
-    train_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="train", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=train_slicer, post_slicer_transform = post_slicer_transform)
+    train_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="train", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=train_slicer, post_slicer_transform = post_slicer_transform, device = device)
     # val_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="test", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=val_slicer, post_slicer_transform = post_slicer_transform)
     train_x = train_data_orig.train_x
     train_y = train_data_orig.train_y
