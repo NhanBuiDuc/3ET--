@@ -232,7 +232,10 @@ if __name__ == "__main__":
 
             # Load the best model
             sim.load_params("./best_model")
-            sim.fit(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y}, epoch=50)
+            # Train the best model for 50 more epochs on the combined dataset
+            for epoch in range(50):
+                print(f"Additional training epoch {epoch}")
+                sim.fit(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y})
 
             # Evaluate the final model
             final_loss = sim.evaluate(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y})
@@ -242,4 +245,6 @@ if __name__ == "__main__":
             combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
             # Load the best model
             sim.load_params("./best_model")
-            sim.fit(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y}, epoch=50)
+            for epoch in range(50):
+                print(f"Additional training epoch {epoch}")
+                sim.fit(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y})
