@@ -3,7 +3,7 @@ import json
 import os
 
 from sklearn.model_selection import train_test_split
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     # Define your model, optimizer, and criterion
     model, inp, out_p, out_p_filt = TestNet().build_model()
     minibatch_size = 3
-    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device="/gpu:2")
+    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device="/gpu:4")
 
     factor = args.spatial_factor  # spatial downsample factor
     temp_subsample_factor = args.temporal_subsample_factor  # downsampling original 100Hz label to 20Hz
