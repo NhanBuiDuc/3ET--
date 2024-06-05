@@ -213,7 +213,7 @@ if __name__ == "__main__":
                 print(f"epoch {epoch}")
                 sim.fit(
                     x={inp: train_x},  y={out_p: train_y, out_p_filt: train_y})
-                val_loss = sim.evaluate(x={inp: val_x}, y={out_p: val_y, out_p_filt: val_y})['out_p_filt_loss']
+                val_loss = sim.evaluate(x={inp: val_x}, y={out_p: val_y, out_p_filt: val_y})['loss']
                 print(f"val_loss: {val_loss}")
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
