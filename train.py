@@ -4,7 +4,7 @@ import os
 
 from sklearn.model_selection import train_test_split
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     with open(os.path.join('./configs', config_file), 'r') as f:
         config = json.load(f)
     args = argparse.Namespace(**config)
-    device = "/gpu:4"
+    device = "/gpu:3"
     
     # Define your model, optimizer, and criterion
     model, inp, out_p, out_p_filt = TestNet().build_model()
