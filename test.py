@@ -21,7 +21,7 @@ import numpy as np
 import nengo_dl
 import tensorflow as tf
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = '4'
 def p_acc(target, prediction, pixel_tolerances=[1,3,5,10]):
     """
     Calculate the accuracy of prediction
