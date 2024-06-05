@@ -20,7 +20,8 @@ import pandas as pd
 import numpy as np
 import nengo_dl
 import tensorflow as tf
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 def p_acc(target, prediction, pixel_tolerances=[1,3,5,10]):
     """
     Calculate the accuracy of prediction
@@ -118,7 +119,7 @@ def main(args):
     # Define your model, optimizer, and criterion
     model, inp, out_p, out_p_filt = TestNet().build_model()
     minibatch_size = 1
-    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
+    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
         optimizer=tf.optimizers.RMSprop(0.001),
         loss={out_p: tf.losses.SparseCategoricalCrossentropy(from_logits=True)},
@@ -170,7 +171,7 @@ def main(args):
     accumulated_batches = []
     accumulated_targets = []
     
-    with open("submission_probe.csv", 'w', newline='') as csvfile_probe, open("submission_probe_filt.csv", 'w', newline='') as csvfile_probe_filt:
+    with open("my_submissions/submission_probe.csv", 'w', newline='') as csvfile_probe, open("my_submissions/submission_probe_filt.csv", 'w', newline='') as csvfile_probe_filt:
         csv_writer_probe = csv.writer(csvfile_probe, delimiter=',')
         csv_writer_probe_filt = csv.writer(csvfile_probe_filt, delimiter=',')
         
