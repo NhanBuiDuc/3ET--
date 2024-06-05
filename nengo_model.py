@@ -77,7 +77,7 @@ class TestNet:
             
             conv1_transform = nengo.Convolution(
 
-                n_filters=8,
+                n_filters=32,
 
                 input_shape=self.input_shape,
 
@@ -88,7 +88,7 @@ class TestNet:
             )
             conv2_transform = nengo.Convolution(
 
-                n_filters=16,
+                n_filters=64,
 
                 input_shape=conv1_transform.output_shape.shape,
 
@@ -99,7 +99,7 @@ class TestNet:
             )
             conv3_transform = nengo.Convolution(
 
-                n_filters=32,
+                n_filters=128,
 
                 input_shape=conv2_transform.output_shape.shape,
 
@@ -113,19 +113,19 @@ class TestNet:
 
             conv1_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 100, neuron_type = nengo.LIF(),
             )
             conv2_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv2_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv2_transform.output_shape.shape), dimensions = 100, neuron_type = nengo.LIF(),
             )
             conv3_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 100, neuron_type = nengo.LIF(),
             )
-            ens_1 = nengo.Ensemble(n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions=1000, neuron_type=nengo.RectifiedLinear())
-            ens_2 = nengo.Ensemble(n_neurons = np.prod(ens_1.n_neurons), dimensions=100, neuron_type=nengo.RectifiedLinear())
-            ens_3 = nengo.Ensemble(n_neurons = np.prod(ens_2.n_neurons), dimensions=3, neuron_type=nengo.RectifiedLinear())
+            ens_1 = nengo.Ensemble(n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions=100, neuron_type=nengo.RectifiedLinear())
+            ens_2 = nengo.Ensemble(n_neurons = np.prod(ens_1.n_neurons), dimensions=10, neuron_type=nengo.RectifiedLinear())
+            ens_3 = nengo.Ensemble(n_neurons = np.prod(ens_2.n_neurons), dimensions=3, neuron_type=nengo.Sigmoid())
 
             nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
             nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
