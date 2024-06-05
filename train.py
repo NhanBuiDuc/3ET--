@@ -4,6 +4,7 @@ import os
 
 from sklearn.model_selection import train_test_split
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -174,57 +175,58 @@ if __name__ == "__main__":
     test_y = train_data_orig.test_y
 
     train = True
-    if train:
-        sim.compile(
-            optimizer=tf.optimizers.RMSprop(0.001),
-            loss={
-                out_p: tf.losses.MeanSquaredError(),
-                out_p_filt: tf.losses.MeanSquaredError(),
-            },
-            metrics={
-                # out_p: [
-                #     p1_accuracy,
-                #     p3_accuracy,
-                #     p5_accuracy,
-                #     p10_accuracy,
-                #     p15_accuracy,
-                #     tf.keras.losses.MeanAbsoluteError(),
-                #     tf.keras.losses.MeanSquaredError()
-                # ],
-                out_p_filt: [                    
-                    p1_accuracy,
-                    p3_accuracy,
-                    p5_accuracy,
-                    p10_accuracy,
-                    p15_accuracy,
-                    tf.keras.losses.MeanAbsoluteError(),
-                    tf.keras.losses.MeanSquaredError()
-                ]
-            }
-        )
-        # sim.fit(x=train_x, y=train_y)
-        # val_loss = sim.evaluate(x=val_x, y=val_y)
-        best_val_loss = float("inf")
-        patience_counter = 0
+    with tf.device(device):
+        if train:
+            sim.compile(
+                optimizer=tf.optimizers.RMSprop(0.001),
+                loss={
+                    out_p: tf.losses.MeanSquaredError(),
+                    out_p_filt: tf.losses.MeanSquaredError(),
+                },
+                metrics={
+                    # out_p: [
+                    #     p1_accuracy,
+                    #     p3_accuracy,
+                    #     p5_accuracy,
+                    #     p10_accuracy,
+                    #     p15_accuracy,
+                    #     tf.keras.losses.MeanAbsoluteError(),
+                    #     tf.keras.losses.MeanSquaredError()
+                    # ],
+                    out_p_filt: [                    
+                        p1_accuracy,
+                        p3_accuracy,
+                        p5_accuracy,
+                        p10_accuracy,
+                        p15_accuracy,
+                        tf.keras.losses.MeanAbsoluteError(),
+                        tf.keras.losses.MeanSquaredError()
+                    ]
+                }
+            )
+            # sim.fit(x=train_x, y=train_y)
+            # val_loss = sim.evaluate(x=val_x, y=val_y)
+            best_val_loss = float("inf")
+            patience_counter = 0
 
-        for epoch in range(args.num_epochs):
-            print(f"epoch {epoch}")
-            sim.fit(
-                x={inp: train_x},  y={out_p: train_y, out_p_filt: train_y})
-            val_loss = sim.evaluate(x={inp: val_x}, y={out_p: val_y, out_p_filt: val_y})['out_p_filt_loss']
-            print(f"val_loss: {val_loss}")
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                patience_counter = 0
-                sim.save_params("./best_model")
-            else:
-                patience_counter += 1
-            print(f"patient {patience_counter}")
-            if patience_counter >= 50:
-                print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
-                break
-        test = sim.evaluate(x={inp: test_x}, y={out_p: test_y, out_p_filt: test_y})
-    else:
-        sim.load_params("./best_model")
-        val_loss = sim.evaluate(val_x, {out_p: val_y, out_p_filt: val_y})
-        print("Validation loss:", val_loss)
+            for epoch in range(args.num_epochs):
+                print(f"epoch {epoch}")
+                sim.fit(
+                    x={inp: train_x},  y={out_p: train_y, out_p_filt: train_y})
+                val_loss = sim.evaluate(x={inp: val_x}, y={out_p: val_y, out_p_filt: val_y})['out_p_filt_loss']
+                print(f"val_loss: {val_loss}")
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    patience_counter = 0
+                    sim.save_params("./best_model")
+                else:
+                    patience_counter += 1
+                print(f"patient {patience_counter}")
+                if patience_counter >= 50:
+                    print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
+                    break
+            test = sim.evaluate(x={inp: test_x}, y={out_p: test_y, out_p_filt: test_y})
+        else:
+            sim.load_params("./best_model")
+            val_loss = sim.evaluate(val_x, {out_p: val_y, out_p_filt: val_y})
+            print("Validation loss:", val_loss)
