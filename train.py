@@ -19,7 +19,7 @@ from tonic import SlicedDataset, DiskCachedDataset
 from nengo_model import SpikingNet, TestNet
 import nengo_dl
 import tensorflow as tf
-
+import numpy as np
 
 def p_tolerance_accuracy(y_true, y_pred, tolerance, width_scale, height_scale):
     """
@@ -226,6 +226,17 @@ if __name__ == "__main__":
                     print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
                     break
             test = sim.evaluate(x={inp: test_x}, y={out_p: test_y, out_p_filt: test_y})
+            # Merge train, validation, and test sets
+            combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
+            combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
+
+            # Load the best model
+            sim.load_params("./best_model")
+            sim.fit(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y}, epoch=50)
+
+            # Evaluate the final model
+            final_loss = sim.evaluate(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y})
+            print(f"Final loss after additional training: {final_loss}")
         else:
             sim.load_params("./best_model")
             val_loss = sim.evaluate(val_x, {out_p: val_y, out_p_filt: val_y})
