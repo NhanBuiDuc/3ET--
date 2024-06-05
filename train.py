@@ -238,6 +238,8 @@ if __name__ == "__main__":
             final_loss = sim.evaluate(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y})
             print(f"Final loss after additional training: {final_loss}")
         else:
+            combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
+            combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
+            # Load the best model
             sim.load_params("./best_model")
-            val_loss = sim.evaluate(val_x, {out_p: val_y, out_p_filt: val_y})
-            print("Validation loss:", val_loss)
+            sim.fit(x={inp: combined_x}, y={out_p: combined_y, out_p_filt: combined_y}, epoch=50)
