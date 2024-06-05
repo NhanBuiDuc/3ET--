@@ -150,7 +150,7 @@ class TestNet:
             nengo.Connection(conv3_feat, ens_1.neurons, synapse=0.01, transform=nengo_dl.dists.Glorot())
             nengo.Connection(ens_1.neurons, ens_2.neurons, synapse=0.01, transform=nengo_dl.dists.Glorot())
             nengo.Connection(ens_2.neurons, ens_3.neurons, synapse=0.01, transform=nengo_dl.dists.Glorot())
-            nengo.Connection(ens_3.neurons, out_node.neurons, synapse=0.01)
+            nengo.Connection(ens_3.neurons, out_node, synapse=0.01)
             # out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv3_feat)
             out_p = nengo.Probe(out_node, label="out_p")
             out_p_filt = nengo.Probe(out_node, synapse=0.01, label="out_p_filt")
