@@ -4,3 +4,5 @@
 /metadata
 /__pycache__/*
 /event_data/*
+best_model.npz
+test_model.py.cfg

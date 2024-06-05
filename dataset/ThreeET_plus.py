@@ -6,6 +6,8 @@ import numpy as np
 import tensorflow as tf
 from tonic.dataset import Dataset
 import tonic.transforms as transforms
+from sklearn.model_selection import train_test_split
+
 class ThreeETplus_Eyetracking(Dataset):
     """3ET DVS eye tracking `3ET <https://github.com/qinche106/cb-convlstm-eyetracking>`_
     ::
@@ -170,7 +172,7 @@ class ThreeETplus_EyetrackingDataset:
         self.slicer = slicer
         self.post_slicer_transform = post_slicer_transform
         # Load all data and labels into memory
-        self.inputs, self.targets = self.load_data()
+        self.train_x, self.train_y, self.val_x, self.val_y, self.test_x, self.test_y = self.load_data()
     def __len__(self):
         return len(self.data_files)
 
@@ -205,10 +207,22 @@ class ThreeETplus_EyetrackingDataset:
             else:
                 all_inputs.append(events)
                 all_targets.append(target)
-        
+        train_x, val_x, train_y, val_y = train_test_split(all_inputs, all_targets, test_size=0.3, random_state=42)
+        val_x, test_x, val_y, test_y = train_test_split(val_x, val_y, test_size=0.3, random_state=42)
             # print(events.shape)
             # print(target.shape)
-        all_inputs =  tf.constant(all_inputs)
-        all_inputs = tf.reshape(all_inputs, [all_inputs.shape[0] , all_inputs.shape[1] * all_inputs.shape[2], -1])
-        all_targets = tf.constant(all_targets)
-        return all_inputs, all_targets
+        train_x =  tf.constant(train_x)
+        train_x = tf.reshape(train_x, [train_x.shape[0] , train_x.shape[1] * train_x.shape[2], -1])
+
+        val_x =  tf.constant(val_x)
+        val_x = tf.reshape(val_x, [val_x.shape[0] , val_x.shape[1] * val_x.shape[2], -1])
+
+        train_y =  tf.constant(train_y)
+
+        val_y =  tf.constant(val_y)
+
+        test_x =  tf.constant(test_x)
+        test_x = tf.reshape(test_x, [test_x.shape[0] , test_x.shape[1] * test_x.shape[2], -1])
+
+        test_y =  tf.constant(test_y)
+        return train_x, train_y, val_x, val_y, test_x, test_y

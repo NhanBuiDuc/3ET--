@@ -15,7 +15,7 @@ from dataset import ThreeETplus_Eyetracking, ScaleLabel, NormalizeLabel, \
     EventSlicesToVoxelGrid, SliceByTimeEventsTargets
 import tonic.transforms as transforms
 from tonic import SlicedDataset, DiskCachedDataset
-from nengo_model import SpikingNet
+from nengo_model import SpikingNet, TestNet
 import pandas as pd
 import numpy as np
 import nengo_dl
@@ -116,7 +116,7 @@ def main(args):
     #     json.dump(vars(args), f)
 
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = SpikingNet().build_model()
+    model, inp, out_p, out_p_filt = TestNet().build_model()
     minibatch_size = 1
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
@@ -124,7 +124,7 @@ def main(args):
         loss={out_p: tf.losses.SparseCategoricalCrossentropy(from_logits=True)},
     )
     # load parameters
-    sim.load_params("./best")
+    sim.load_params("./best_model")
     # test data loader always cuts the event stream with the labeling frequency
     factor = args.spatial_factor
     temp_subsample_factor = args.temporal_subsample_factor
