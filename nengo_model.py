@@ -72,8 +72,8 @@ class SpikingNet:
             
             return net, inp, out_p, out_p_filt
 
-def sigmoid_activation(x):
-    return 1 / (1 + np.exp(-x))
+def sigmoid_activation(time, data):
+    return 1 / (1 + np.exp(-data))
         
 class TestNet:
     def __init__(self):
