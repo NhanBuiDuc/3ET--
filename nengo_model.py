@@ -140,9 +140,9 @@ class TestNet:
 
                 n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 100, neuron_type = nengo.LIF(),
             )
-            ens_1 = nengo.Ensemble(n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions=100, neuron_type=nengo.RectifiedLinear())
-            ens_2 = nengo.Ensemble(n_neurons = np.prod(ens_1.n_neurons), dimensions=50, neuron_type=nengo.RectifiedLinear())
-            ens_3 = nengo.Ensemble(n_neurons = np.prod(ens_2.n_neurons), dimensions=10, neuron_type=nengo.Sigmoid())
+            ens_1 = nengo.Ensemble(n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions=100, neuron_type=nengo.LIF())
+            ens_2 = nengo.Ensemble(n_neurons = np.prod(ens_1.n_neurons), dimensions=50, neuron_type=nengo.LIF())
+            ens_3 = nengo.Ensemble(n_neurons = np.prod(ens_2.n_neurons), dimensions=10, neuron_type=nengo.LIF())
             nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
             nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
             nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
