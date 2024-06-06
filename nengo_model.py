@@ -156,7 +156,6 @@ class TestNet:
 class LMUCell(nengo.Network):
     def __init__(self, units, order, theta, input_d, **kwargs):
         super().__init__(**kwargs)
-        self.input_shape = (1, 60, 80)
         # compute the A and B matrices according to the LMU's mathematical derivation
         # (see the paper for details)
         Q = np.arange(order, dtype=np.float64)
@@ -227,7 +226,7 @@ class LMU():
 
             # lmu cell
             lmu = LMUCell(
-                units=212,
+                units=self.input_shape[0] * self.input_shape[1],
                 order=256,
                 theta=self.input_shape[0],
                 input_d=self.input_shape[1],
