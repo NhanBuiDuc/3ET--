@@ -226,10 +226,10 @@ class LMU():
 
             # lmu cell
             lmu = LMUCell(
-                units=self.input_shape[0] * self.input_shape[1],
+                units=212,
                 order=256,
                 theta=self.input_shape[0],
-                input_d=self.input_shape[1],
+                input_d=(self.input_shape[0] * self.input_shape[1]),
             )
             conn = nengo.Connection(inp, lmu.x, synapse=None)
             model.config[conn].trainable = False
