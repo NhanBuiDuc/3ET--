@@ -178,10 +178,10 @@ if __name__ == "__main__":
     with tf.device(device):
         if train:
             sim.compile(
-                optimizer=tf.optimizers.RMSprop(0.001),
+                optimizer=tf.optimizers.Adamn(),
                 loss={
                     out_p: tf.losses.MeanSquaredError(),
-                    out_p_filt: tf.losses.MeanSquaredError(),
+                    # out_p_filt: tf.losses.MeanSquaredError(),
                 },
                 metrics={
                     # out_p: [
