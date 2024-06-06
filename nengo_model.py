@@ -142,9 +142,9 @@ class TestNet:
                 n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
             )
 
-            nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
-            nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
-            nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
+            nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.05, transform=conv1_transform)
+            nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.05, transform=conv2_transform)
+            nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.05, transform=conv3_transform)
 
             out = nengo.Node(size_in=3)
             nengo.Connection(conv3_feat.neurons, out, synapse=None)
