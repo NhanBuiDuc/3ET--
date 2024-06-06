@@ -197,7 +197,7 @@ if __name__ == "__main__":
     test_x = train_data_orig.test_x
     test_y = train_data_orig.test_y
 
-    isTrain = True
+    isTrain = False
     sim.compile(
         optimizer=tf.optimizers.Adam(),
         loss={
@@ -258,10 +258,11 @@ if __name__ == "__main__":
                     x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 0:1], p_b: train_y[:, :, 1:2], 
                                         p_x_filt: train_y[:, :, 0:1], p_y_filt: train_y[:, :, 0:1], p_b_filt: train_y[:, :, 1:2]})
                     # x={inp: train_x},  y={p_x: train_y, p_x_filt: train_y})
-                val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2], p_b: val_y[:, :, 2:3],
+                losses = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2], p_b: val_y[:, :, 2:3],
                                                            p_x_filt: val_y[:, :, 0:1], p_y_filt: val_y[:, :, 1:2], p_b_filt: val_y[:, :, 2:3]})
                 # val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y, p_x_filt: val_y})['loss']
-                print(f"val_loss: {val_loss}")
+                val_loss = losses['loss']
+                print(f"val_loss: {losses}")
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     patience_counter = 0

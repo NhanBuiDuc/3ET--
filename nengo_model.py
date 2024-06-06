@@ -86,7 +86,7 @@ class TestNet:
         with nengo.Network() as model:
             def sigmoid(x):
                 return 1 / (1 + np.exp(-x))
-            
+            model.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()
             inp = nengo.Node(output=np.zeros(self.input_shape[1] * self.input_shape[2]))
             print(np.prod(self.input_shape))
             print("Output: ", inp.size_out)
@@ -112,21 +112,18 @@ class TestNet:
             print(conv1_transform.output_shape)
 
             conv1_feat = nengo.Ensemble(
-                n_neurons=np.prod(conv1_transform.output_shape.shape), dimensions=conv1_transform.output_shape.shape[0],
-                neuron_type=nengo.LIF()
+                n_neurons=np.prod(conv1_transform.output_shape.shape), dimensions=conv1_transform.output_shape.shape[0]
             )
             conv2_feat = nengo.Ensemble(
-                n_neurons=np.prod(conv2_transform.output_shape.shape), dimensions=conv2_transform.output_shape.shape[0],
-                neuron_type=nengo.LIF()
+                n_neurons=np.prod(conv2_transform.output_shape.shape), dimensions=conv2_transform.output_shape.shape[0]
             )
             conv3_feat = nengo.Ensemble(
-                n_neurons=np.prod(conv3_transform.output_shape.shape), dimensions=conv3_transform.output_shape.shape[0],
-                neuron_type=nengo.LIF()
+                n_neurons=np.prod(conv3_transform.output_shape.shape), dimensions=conv3_transform.output_shape.shape[0]
             )
 
-            nengo.Connection(inp, conv1_feat.neurons, synapse=0.001, transform=conv1_transform)
-            nengo.Connection(conv1_feat.neurons, conv2_feat.neurons, synapse=0.001, transform=conv2_transform)
-            nengo.Connection(conv2_feat.neurons, conv3_feat.neurons, synapse=0.001, transform=conv3_transform)
+            nengo.Connection(inp, conv1_feat.neurons, transform=conv1_transform)
+            nengo.Connection(conv1_feat.neurons, conv2_feat.neurons, transform=conv2_transform)
+            nengo.Connection(conv2_feat.neurons, conv3_feat.neurons, transform=conv3_transform)
             ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(conv3_feat)
             ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(conv3_feat)
             ens_b = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(conv3_feat)

@@ -22,7 +22,7 @@ import nengo_dl
 import tensorflow as tf
 from nengo_model import SpikingNet, TestNet, LMU
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 def p_acc(target, prediction, pixel_tolerances=[1,3,5,10]):
     """
     Calculate the accuracy of prediction
@@ -116,15 +116,16 @@ def main(args):
     # # also dump the args to a JSON file in MLflow artifact
     # with open(os.path.join(mlflow.get_artifact_uri(), "args.json"), 'w') as f:
     #     json.dump(vars(args), f)
-    device = "/gpu:3"
+    device = "/gpu:0"
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = TestNet().build_model()
+    # model, inp, out_p, out_p_filt = TestNet().build_model()
+    model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet().build_model()
     minibatch_size = 1
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
-    sim.compile(
-        optimizer=tf.optimizers.RMSprop(0.001),
-        loss={out_p: tf.losses.SparseCategoricalCrossentropy(from_logits=True)},
-    )
+    # sim.compile(
+    #     optimizer=tf.optimizers.RMSprop(0.001),
+    #     loss={out_p: tf.losses.SparseCategoricalCrossentropy(from_logits=True)},
+    # )
     # load parameters
     sim.load_params("./best_model")
     # test data loader always cuts the event stream with the labeling frequency
@@ -192,15 +193,20 @@ def main(args):
                     tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
                     
                     output = sim.predict(tf_data)
-                    out_probe = output[out_p]
-                    out_probe_filt = output[out_p_filt]
+                    out_p_x = output[p_x]
+                    out_p_x_filt = output[p_x_filt]
 
-                    out_probe[..., 0] *= 640 * factor
-                    out_probe[..., 1] *= 480 * factor
+                    out_p_y = output[p_y]
+                    out_p_y_filt = output[p_y_filt]
 
-                    out_probe_filt[..., 0] *= 640 * factor
-                    out_probe_filt[..., 1] *= 480 * factor
+                    out_p_x *= 640 * factor
+                    out_p_y *= 480 * factor
 
+                    out_p_x_filt *= 640 * factor
+                    out_p_y_filt *= 480 * factor
+                    out_probe = np.concatenate((out_p_x, out_p_y), axis=-1)
+                    
+                    out_probe_filt = np.concatenate((out_p_x_filt, out_p_y_filt), axis=-1)
                     for sample in range(minibatch_size):
                         for frame_id in range(target_placeholder.shape[1]):
                             row_to_write_probe = out_probe[sample][frame_id]
