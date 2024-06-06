@@ -223,7 +223,7 @@ class LMU():
             )
 
             # input node
-            inp = nengo.Node(np.zeros(self.input_shape[1] * self.input_shape[2]))
+            inp = nengo.Node(np.zeros(self.input_shape[0] * self.input_shape[1]))
 
             # lmu cell
             lmu = LMUCell(
