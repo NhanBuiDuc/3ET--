@@ -4,7 +4,7 @@ import os
 
 from sklearn.model_selection import train_test_split
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -32,8 +32,8 @@ def combined_p_tolerance_accuracy(y_true_x, y_true_y, y_pred_x, y_pred_y, tolera
     return accuracy
 def create_combined_metric(tolerance):
     def combined_metric(y_true, y_pred):
-        y_true_x, y_true_y = y_true[:, :, 0], y_true[:, :, 1]
-        y_pred_x, y_pred_y = y_pred[:, :, 0], y_pred[:, :, 1]
+        y_true_x, y_true_y = y_true[:, :, 0:1], y_true[:, :, 1:2]
+        y_pred_x, y_pred_y = y_pred[:, :, 0:1], y_pred[:, :, 1:2]
         return combined_p_tolerance_accuracy(y_true_x, y_true_y, y_pred_x, y_pred_y, tolerance, args.sensor_width * args.spatial_factor, args.sensor_height * args.spatial_factor)
     return combined_metric
 
@@ -82,13 +82,13 @@ def p10_accuracy(y_true, y_pred):
 def p15_accuracy(y_true, y_pred):
     return p_tolerance_accuracy(y_true, y_pred, tolerance=15, width_scale=args.sensor_width * args.spatial_factor, height_scale=args.sensor_height * args.spatial_factor)
 
-def train(model, sim, out_p, train_loader, val_loader, args):
+def train(model, sim, p_x, train_loader, val_loader, args):
     best_val_loss = float("inf")
     patience_counter = 0  # Counter to keep track of patient epochs
 
     # Training loop
     for epoch in range(args.num_epochs):
-        model, train_loss, metrics = train_nengo_epoch(model, sim, out_p, train_loader, args)
+        model, train_loss, metrics = train_nengo_epoch(model, sim, p_x, train_loader, args)
         print("train_loss: ", train_loss)
         print("train_p_acc_all: ", metrics['tr_p_acc_all'])
         print("train_p_error_all: ", metrics['tr_p_error_all'])
@@ -150,11 +150,11 @@ if __name__ == "__main__":
     with open(os.path.join('./configs', config_file), 'r') as f:
         config = json.load(f)
     args = argparse.Namespace(**config)
-    device = "/gpu:3"
+    device = "/gpu:0"
     
     # Define your model, optimizer, and criterion
     # model, inp, out_p, out_p_filt = TestNet().build_model()
-    model, inp, out_x, out_x_filt, out_y, out_y_filt, out_b, out_b_filt = TestNet().build_model()
+    model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet().build_model()
     minibatch_size = 3
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
 
@@ -197,13 +197,13 @@ if __name__ == "__main__":
     test_x = train_data_orig.test_x
     test_y = train_data_orig.test_y
 
-    train = True
+    isTrain = True
     sim.compile(
         optimizer=tf.optimizers.Adam(),
         loss={
-            out_x: tf.losses.MeanSquaredError(),
-            out_y: tf.losses.MeanSquaredError(),
-            out_b: tf.losses.MeanSquaredError(),
+            p_x: tf.losses.MeanSquaredError(),
+            p_y: tf.losses.MeanSquaredError(),
+            # p_b: tf.losses.MeanSquaredError(),
         },
         metrics={
             # out_p: [
@@ -224,39 +224,43 @@ if __name__ == "__main__":
             #     tf.keras.losses.MeanAbsoluteError(),
             #     tf.keras.losses.MeanSquaredError()
             # ]
-            out_x: [
-                combined_p1_accuracy,
-                combined_p3_accuracy,
-                combined_p5_accuracy,
-                combined_p10_accuracy,
-                combined_p15_accuracy,
-                tf.keras.losses.MeanAbsoluteError(),
-                tf.keras.losses.MeanSquaredError()
-            ],
-            out_y: [                    
-                combined_p1_accuracy,
-                combined_p3_accuracy,
-                combined_p5_accuracy,
-                combined_p10_accuracy,
-                combined_p15_accuracy,
-                tf.keras.losses.MeanAbsoluteError(),
-                tf.keras.losses.MeanSquaredError()
-            ]
+            # out_x: [
+            #     combined_p1_accuracy,
+            #     combined_p3_accuracy,
+            #     combined_p5_accuracy,
+            #     combined_p10_accuracy,
+            #     combined_p15_accuracy,
+            #     tf.keras.losses.MeanAbsoluteError(),
+            #     tf.keras.losses.MeanSquaredError()
+            # ],
+            # p_y: [                    
+            #     combined_p1_accuracy,
+            #     combined_p3_accuracy,
+            #     combined_p5_accuracy,
+            #     combined_p10_accuracy,
+            #     combined_p15_accuracy,
+            #     tf.keras.losses.MeanAbsoluteError(),
+            #     tf.keras.losses.MeanSquaredError()
+            # ]
         }
     )
     with tf.device(device):
-        if train:
+        if isTrain:
             
             # sim.fit(x=train_x, y=train_y)
             # val_loss = sim.evaluate(x=val_x, y=val_y)
             best_val_loss = float("inf")
             patience_counter = 0
-
             for epoch in range(args.num_epochs):
                 print(f"epoch {epoch}")
                 sim.fit(
-                    x={inp: train_x},  y={out_x: train_y[:, :, 0], out_y: train_y[:, :, 1], out_b: train_y[:, :, 2]})
-                val_loss = sim.evaluate(x={inp: val_x}, y={out_x: val_y[:, :, 0], out_y: val_y[:, :, 1], out_b: val_y[:, :, 2]})['loss']
+                    # x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 1:2]})
+                    x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 0:1], p_b: train_y[:, :, 1:2], 
+                                        p_x_filt: train_y[:, :, 0:1], p_y_filt: train_y[:, :, 0:1], p_b_filt: train_y[:, :, 1:2]})
+                    # x={inp: train_x},  y={p_x: train_y, p_x_filt: train_y})
+                val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2], p_b: val_y[:, :, 2:3],
+                                                           p_x_filt: val_y[:, :, 0:1], p_y_filt: val_y[:, :, 1:2], p_b_filt: val_y[:, :, 2:3]})['loss']
+                # val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y, p_x_filt: val_y})['loss']
                 print(f"val_loss: {val_loss}")
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
@@ -268,7 +272,8 @@ if __name__ == "__main__":
                 if patience_counter >= 50:
                     print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
                     break
-            test = sim.evaluate(x={inp: test_x}, y={out_x: test_y[:, :, 0], out_y: test_y[:, :, 1], out_b: test_y[:, :, 2]})
+            test = sim.evaluate(x={inp: test_x}, y={p_x: test_y[:, :, 0:1], p_y: test_y[:, :, 1:2], p_b: test_y[:, :, 2:3],
+                                                    p_x_filt: test_y[:, :, 0:1], p_y_filt: test_y[:, :, 1:2], p_b_filt: test_y[:, :, 2:3]})
             # Merge train, validation, and test sets
             combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
             combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
@@ -278,10 +283,12 @@ if __name__ == "__main__":
             # Train the best model for 50 more epochs on the combined dataset
             for epoch in range(50):
                 print(f"Additional training epoch {epoch}")
-                sim.fit(x={inp: combined_x}, y={out_x: combined_y[:, :, 0], out_y: combined_y[:, :, 1], out_b: combined_y[:, :, 2]})
+                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
+                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
 
             # Evaluate the final model
-            final_loss = sim.evaluate(x={inp: combined_x}, y={out_x: combined_y[:, :, 0], out_y: combined_y[:, :, 1], out_b: combined_y[:, :, 3]})
+            final_loss = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
+                                                              p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
             print(f"Final loss after additional training: {final_loss}")
         else:
             combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
@@ -290,4 +297,5 @@ if __name__ == "__main__":
             sim.load_params("./best_model")
             for epoch in range(50):
                 print(f"Additional training epoch {epoch}")
-                sim.fit(x={inp: combined_x}, y={out_x: combined_y[:, :, 0], out_y: combined_y[:, :, 1], out_b: combined_y[:, :, 3]})
+                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
+                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
