@@ -325,7 +325,7 @@ class LMUConv():
             # Concatenate the outputs along the last dimension (axis=-1)
             concatenated_out = tf.keras.layers.concatenate([out_1, out_2, out_3], axis=-1)
             # Define the output layer
-            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(out)
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(concatenated_out)
             # record output. note that we set keep_history=False above, so this will
             # only record the output on the last timestep (which is all we need
             # on this task)
