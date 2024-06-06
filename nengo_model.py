@@ -216,8 +216,8 @@ class LMU():
         with nengo.Network(seed=42) as model:
             # remove some unnecessary features to speed up the training
             nengo_dl.configure_settings(
-                trainable=None,
-                stateful=False,
+                trainable=True,
+                stateful=True,
                 keep_history=True,
             )
 
@@ -232,7 +232,7 @@ class LMU():
                 input_d=(self.input_shape[0] * self.input_shape[1]),
             )
             conn = nengo.Connection(inp, lmu.x, synapse=None)
-            model.config[conn].trainable = False
+            model.config[conn].trainable = True
 
             out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(lmu.x)
 
@@ -241,6 +241,8 @@ class LMU():
             # on this task)
             out_p = nengo.Probe(out)
             out_p_filt = nengo.Probe(out, synapse = 0.001)
+            self.out = out_p
+            self.out_p_filt = out_p_filt
             return model, inp, out_p, out_p_filt
 # import nengo
 
