@@ -257,6 +257,12 @@ class LMUConv():
                 keep_history=True,
             )
             inp = nengo.Node(size_in=0, output = np.zeros(self.input_shape[1] * self.input_shape[2]))
+            input_ens = nengo.Ensemble(
+
+                n_neurons = np.prod(self.input_shape[1] * self.input_shape[2]), dimensions = 100, neuron_type = nengo.LIF(),
+            )
+
+            nengo.Connection(pre = inp, post = input_ens.neurons, synapse = 0.001)
             print(np.prod(self.input_shape))
             print("Output: ", inp.size_out)
             
@@ -275,7 +281,7 @@ class LMUConv():
 
                 n_filters=32,
 
-                input_shape=conv1_transform.output_shape.shape,
+                input_shape=self.input_shape,
 
                 kernel_size=(4, 4),
 
@@ -286,7 +292,7 @@ class LMUConv():
 
                 n_filters=8,
 
-                input_shape=conv2_transform.output_shape.shape,
+                input_shape=self.input_shape,
 
                 kernel_size=(7, 7),
 
@@ -309,9 +315,9 @@ class LMUConv():
                 n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
             )
 
-            nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
-            nengo.Connection(pre = inp, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
-            nengo.Connection(pre = inp, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
+            nengo.Connection(pre = input_ens, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
+            nengo.Connection(pre = input_ens, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
+            nengo.Connection(pre = input_ens, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
 
            # Merge features
             merged = nengo.Ensemble(n_neurons=1000, dimensions=conv1_feat.dimensions + conv2_feat.dimensions + conv3_feat.dimensions)
