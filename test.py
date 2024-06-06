@@ -20,6 +20,7 @@ import pandas as pd
 import numpy as np
 import nengo_dl
 import tensorflow as tf
+from nengo_model import SpikingNet, TestNet, LMU
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 def p_acc(target, prediction, pixel_tolerances=[1,3,5,10]):
