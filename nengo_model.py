@@ -247,7 +247,7 @@ class LMU():
 class LMUConv():
     def __init__(self):
         self.neuron_type = nengo.LIF(amplitude=0.01)
-        self.input_shape = (60, 80)
+        self.input_shape = (1, 60, 80)
     def build_model(self):
         with nengo.Network(seed=42) as model:
             # remove some unnecessary features to speed up the training
@@ -256,7 +256,7 @@ class LMUConv():
                 stateful=True,
                 keep_history=True,
             )
-            inp = nengo.Node(np.zeros(self.input_shape[0] * self.input_shape[1]))
+            inp = nengo.Node(size_in=0, output = np.zeros(self.input_shape[1] * self.input_shape[2]))
             print(np.prod(self.input_shape))
             print("Output: ", inp.size_out)
             
