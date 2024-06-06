@@ -262,7 +262,7 @@ class LMUConv():
             
             conv1_transform = nengo.Convolution(
 
-                n_filters=128,
+                n_filters=256,
 
                 input_shape=self.input_shape,
 
@@ -273,22 +273,22 @@ class LMUConv():
             )
             conv2_transform = nengo.Convolution(
 
-                n_filters=128,
+                n_filters=32,
 
                 input_shape=conv1_transform.output_shape.shape,
 
-                kernel_size=(3, 3),
+                kernel_size=(4, 4),
 
                 padding="same"
 
             )
             conv3_transform = nengo.Convolution(
 
-                n_filters=128,
+                n_filters=8,
 
                 input_shape=conv2_transform.output_shape.shape,
 
-                kernel_size=(3, 3),
+                kernel_size=(7, 7),
 
                 padding="same"
 
@@ -310,19 +310,15 @@ class LMUConv():
             )
 
             nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
-            nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
-            nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
-            # lmu cell
-            lmu = LMUCell(
-                units=212,
-                order=256,
-                theta=self.input_shape[0],
-                input_d=np.prod(conv3_transform.output_shape.shape),
-            )
-            conn = nengo.Connection(conv3_feat.neurons, lmu.x, synapse=None)
-            model.config[conn].trainable = True
+            nengo.Connection(pre = inp, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
+            nengo.Connection(pre = inp, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
 
-            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(lmu.x)
+           # Merge features
+            merged = nengo.Ensemble(n_neurons=1000, dimensions=conv1_feat.dimensions + conv2_feat.dimensions + conv3_feat.dimensions)
+            nengo.Connection(conv1_feat.neurons, merged.neurons[:conv1_feat.dimensions])
+            nengo.Connection(conv2_feat.neurons, merged.neurons[conv1_feat.dimensions:conv1_feat.dimensions+conv2_feat.dimensions])
+            nengo.Connection(conv3_feat.neurons, merged.neurons[conv1_feat.dimensions+conv2_feat.dimensions:])
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(merged)
 
             # record output. note that we set keep_history=False above, so this will
             # only record the output on the last timestep (which is all we need
