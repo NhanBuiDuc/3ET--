@@ -157,13 +157,17 @@ class TestNet:
 
                 n_neurons = conv3_feat.neurons, dimensions = 3, neuron_type = nengo.LIF(),
             )
-            out_x =  nengo.Node(size_in=conv3_feat.neurons, size_out = 1, output=lambda t, x: sigmoid(x))
-            out_y =  nengo.Node(size_in=conv3_feat.neurons, size_out = 1, output=lambda t, x: sigmoid(x))
-            out_b =  nengo.Node(size_in=conv3_feat.neurons, size_out = 1, output=lambda t, x: step_function(x))
+            out_x =  nengo.Node(size_in=ens_x.neurons, size_out = 1, output=lambda t, x: sigmoid(x))
+            out_y =  nengo.Node(size_in=ens_y.neurons, size_out = 1, output=lambda t, x: sigmoid(x))
+            out_b =  nengo.Node(size_in=ens_b.neurons, size_out = 1, output=lambda t, x: step_function(x))
 
-            nengo.Connection(conv3_feat.neurons, out_x, synapse=0.0001,)
-            nengo.Connection(conv3_feat.neurons, out_y, synapse=0.0001,)
-            nengo.Connection(conv3_feat.neurons, out_b, synapse=0.0001,)
+            nengo.Connection(conv3_feat.neurons, ens_x, synapse=0.0001,)
+            nengo.Connection(conv3_feat.neurons, ens_y, synapse=0.0001,)
+            nengo.Connection(conv3_feat.neurons, ens_b, synapse=0.0001,)
+
+            nengo.Connection(ens_x, out_x, synapse=0.0001,)
+            nengo.Connection(ens_y, out_y, synapse=0.0001,)
+            nengo.Connection(ens_b, out_b, synapse=0.0001,)
             # out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv3_feat)
             out_x = nengo.Probe(out_x, label="out_p")
             out_x_filt = nengo.Probe(out_x_filt, synapse=0.001, label="out_p_filt")
