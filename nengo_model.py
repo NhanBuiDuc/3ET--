@@ -85,11 +85,8 @@ class TestNet:
     def build_model(self):
         with nengo.Network() as model:
             # Define a node to concatenate the outputs of the individual probes
-            def concat_probes(x):
-                return x
-            # Define input node representing the input image
-            def inp_cllbck(t, data):
-                return data
+            def sigmoid(x):
+                return 1 / (1 + np.exp(-x))
             inp = nengo.Node(size_in=0, output = np.zeros(self.input_shape[1] * self.input_shape[2]))
             print(np.prod(self.input_shape))
             print("Output: ", inp.size_out)
@@ -132,25 +129,23 @@ class TestNet:
 
             conv1_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 1, neuron_type = nengo.LIF(),
+                n_neurons = 100, dimensions = np.prod(conv1_transform.output_shape.shape), neuron_type = nengo.LIF(),
             )
             conv2_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv2_transform.output_shape.shape), dimensions = 1, neuron_type = nengo.LIF(),
+                n_neurons = 100, dimensions = np.prod(conv2_transform.output_shape.shape), neuron_type = nengo.LIF(),
             )
             conv3_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 1, neuron_type = nengo.LIF(),
+                n_neurons = 100, dimensions = np.prod(conv3_transform.output_shape.shape), neuron_type = nengo.LIF(),
             )
 
-            nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.05, transform=conv1_transform)
-            nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.05, transform=conv2_transform)
-            nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.05, transform=conv3_transform)
+            nengo.Connection(pre = inp, post = conv1_feat, synapse = 0.05, transform=conv1_transform)
+            nengo.Connection(pre = conv1_feat, post = conv2_feat, synapse = 0.05, transform=conv2_transform)
+            nengo.Connection(pre = conv2_feat, post = conv3_feat, synapse = 0.05, transform=conv3_transform)
 
-            out = nengo.Node(size_in=conv3_feat.neurons.size_out, size_out = 3)
-            out_sigmoid = nengo.Node(size_in=out.size_out, size_out = 3)
-            nengo.Connection(conv3_feat.neurons, out, synapse=None)
-            nengo.Connection(out, out_sigmoid, synapse=None, transform= sigmoid_activation)
+            out = nengo.Node(size_in=conv3_feat.dimensions, size_out = 3, output=lambda t, x: sigmoid(x))
+            nengo.Connection(conv3_feat, out, synapse=None,)
             # out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv3_feat)
             out_p = nengo.Probe(out, label="out_p")
             out_p_filt = nengo.Probe(out, synapse=0.01, label="out_p_filt")
