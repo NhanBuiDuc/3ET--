@@ -218,7 +218,7 @@ class LMU():
             nengo_dl.configure_settings(
                 trainable=None,
                 stateful=False,
-                keep_history=False,
+                keep_history=True,
             )
 
             # input node
