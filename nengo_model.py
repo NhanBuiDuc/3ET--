@@ -244,66 +244,91 @@ class LMU():
             self.out = out_p
             self.out_p_filt = out_p_filt
             return model, inp, out_p, out_p_filt
-# import nengo
+class LMUConv():
+    def __init__(self):
+        self.neuron_type = nengo.LIF(amplitude=0.01)
+        self.input_shape = (60, 80)
+    def build_model(self):
+        with nengo.Network(seed=42) as model:
+            # remove some unnecessary features to speed up the training
+            nengo_dl.configure_settings(
+                trainable=True,
+                stateful=True,
+                keep_history=True,
+            )
+            inp = nengo.Node(size_in=0, output = np.zeros(self.input_shape[1] * self.input_shape[2]))
+            print(np.prod(self.input_shape))
+            print("Output: ", inp.size_out)
+            
+            conv1_transform = nengo.Convolution(
 
-# import numpy as np
+                n_filters=128,
 
-# from nengo.utils.numpy import rmse
+                input_shape=self.input_shape,
 
+                kernel_size=(3, 3),
 
+                padding="same"
 
-# # Define input signal
+            )
+            conv2_transform = nengo.Convolution(
 
-# input_shape = (60, 80, 1)  # Assuming grayscale images with size 28x28
+                n_filters=128,
 
-# n_filters = 32
+                input_shape=conv1_transform.output_shape.shape,
 
-# kernel_size = (3, 3)
+                kernel_size=(3, 3),
 
-# # Input callback function
-# def inp_cllbck(t, data):
-#     return np.zeros(np.prod(input_shape))
-    
-# # Create a function to define a convolutional block
-# def conv_block(network, n_filters, input_shape, n_layers):
-#     for _ in range(n_layers):
-#         conv_transform = nengo.Convolution(
-#             n_filters=n_filters,
-#             input_shape=input_shape,
-#             kernel_size=(3, 3),
-#             padding=conv_params["padding"],
-#             strides=conv_params["strides"]
-#         )
-#         input_shape = conv_transform.output_shape.shape
-#         network.append((conv_transform, input_shape))
-#     return input_shape
-    
-# with nengo.Network() as model:
+                padding="same"
 
-#     # Define input node representing the input image
+            )
+            conv3_transform = nengo.Convolution(
 
-#     inp = nengo.Node(size_in=1, output = inp_cllbck)
-#     print(np.prod(input_shape))
-#     print("Output: ", inp.size_out)
-    
-#     conv_transform = nengo.Convolution(
+                n_filters=128,
 
-#         n_filters=n_filters,
+                input_shape=conv2_transform.output_shape.shape,
 
-#         input_shape=input_shape,
+                kernel_size=(3, 3),
 
-#         kernel_size=kernel_size,
+                padding="same"
 
-#         padding="same"
+            )
+            print(conv1_transform.output_shape)
+            # Define convolutional layer
 
-#     )
-#     print(conv_transform.output_shape)
-#     # Define convolutional layer
+            conv1_feat = nengo.Ensemble(
 
-#     conv1_feat = nengo.Ensemble(
+                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+            )
+            conv2_feat = nengo.Ensemble(
 
-#         n_neurons = 1000, dimensions = np.prod(conv_transform.output_shape.shape), neuron_type = nengo.SpikingRectifiedLinear()
-#     )
-#     nengo.Connection(pre = inp, post = conv1_feat, synapse = 0.001, transform=conv_transform)
+                n_neurons = np.prod(conv2_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+            )
+            conv3_feat = nengo.Ensemble(
 
-  
+                n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+            )
+
+            nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
+            nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
+            nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
+            # lmu cell
+            lmu = LMUCell(
+                units=212,
+                order=256,
+                theta=self.input_shape[0],
+                input_d=np.prod(conv3_transform.output_shape.shape),
+            )
+            conn = nengo.Connection(conv3_feat.neurons, lmu.x, synapse=None)
+            model.config[conn].trainable = True
+
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(lmu.x)
+
+            # record output. note that we set keep_history=False above, so this will
+            # only record the output on the last timestep (which is all we need
+            # on this task)
+            out_p = nengo.Probe(out)
+            out_p_filt = nengo.Probe(out, synapse = 0.001)
+            self.out = out_p
+            self.out_p_filt = out_p_filt
+            return model, inp, out_p, out_p_filt
