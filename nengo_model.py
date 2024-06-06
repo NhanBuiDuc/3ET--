@@ -235,9 +235,7 @@ class LMU():
             conn = nengo.Connection(inp, lmu.x, synapse=None)
             model.config[conn].trainable = False
 
-            # dense linear readout
-            out = nengo.Node(size_in=10, )
-            nengo.Connection(lmu.h, out, transform=nengo_dl.dists.Glorot(), synapse=None)
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(lmu)
 
             # record output. note that we set keep_history=False above, so this will
             # only record the output on the last timestep (which is all we need

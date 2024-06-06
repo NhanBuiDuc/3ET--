@@ -16,7 +16,7 @@ from dataset import ThreeETplus_EyetrackingDataset,ThreeETplus_Eyetracking,  Sca
     EventSlicesToVoxelGrid, SliceByTimeEventsTargets
 import tonic.transforms as transforms
 from tonic import SlicedDataset, DiskCachedDataset
-from nengo_model import SpikingNet, TestNet
+from nengo_model import SpikingNet, TestNet, LMU
 import nengo_dl
 import tensorflow as tf
 import numpy as np
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     device = "/gpu:3"
     
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = TestNet().build_model()
+    model, inp, out_p, out_p_filt = LMU().build_model()
     minibatch_size = 3
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
 
