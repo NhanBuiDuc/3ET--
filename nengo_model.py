@@ -319,13 +319,13 @@ class LMUConv():
             nengo.Connection(pre = input_ens.neurons, post = conv2_feat.neurons, synapse = 0.01, transform=conv2_transform)
             nengo.Connection(pre = input_ens.neurons, post = conv3_feat.neurons, synapse = 0.01, transform=conv3_transform)
 
-           # Merge features
-            merged = nengo.Ensemble(n_neurons=1000, dimensions=conv1_feat.dimensions + conv2_feat.dimensions + conv3_feat.dimensions)
-            nengo.Connection(conv1_feat.neurons, merged.neurons[:conv1_feat.dimensions])
-            nengo.Connection(conv2_feat.neurons, merged.neurons[conv1_feat.dimensions:conv1_feat.dimensions+conv2_feat.dimensions])
-            nengo.Connection(conv3_feat.neurons, merged.neurons[conv1_feat.dimensions+conv2_feat.dimensions:])
-            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(merged)
-
+            out_1 = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv1_feat)
+            out_2 = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv2_feat)
+            out_3 = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv3_feat)
+            # Concatenate the outputs along the last dimension (axis=-1)
+            concatenated_out = tf.keras.layers.concatenate([out_1, out_2, out_3], axis=-1)
+            # Define the output layer
+            out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(out)
             # record output. note that we set keep_history=False above, so this will
             # only record the output on the last timestep (which is all we need
             # on this task)
