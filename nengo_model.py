@@ -147,36 +147,36 @@ class TestNet:
             nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.001, transform=conv3_transform)
             ens_x = nengo.Ensemble(
 
-                n_neurons = conv3_feat.neurons, dimensions = 3, neuron_type = nengo.LIF(),
+                n_neurons = conv3_feat.n_neurons, dimensions = 3, neuron_type = nengo.LIF(),
             )
             ens_y = nengo.Ensemble(
 
-                n_neurons = conv3_feat.neurons, dimensions = 3, neuron_type = nengo.LIF(),
+                n_neurons = conv3_feat.n_neurons, dimensions = 3, neuron_type = nengo.LIF(),
             )
             ens_b = nengo.Ensemble(
 
-                n_neurons = conv3_feat.neurons, dimensions = 3, neuron_type = nengo.LIF(),
+                n_neurons = conv3_feat.n_neurons, dimensions = 3, neuron_type = nengo.LIF(),
             )
-            out_x =  nengo.Node(size_in=ens_x.neurons, size_out = 1, output=lambda t, x: sigmoid(x))
-            out_y =  nengo.Node(size_in=ens_y.neurons, size_out = 1, output=lambda t, x: sigmoid(x))
-            out_b =  nengo.Node(size_in=ens_b.neurons, size_out = 1, output=lambda t, x: step_function(x))
+            out_x =  nengo.Node(size_in=ens_x.n_neurons, size_out = 1, output=lambda t, x: sigmoid(x))
+            out_y =  nengo.Node(size_in=ens_y.n_neurons, size_out = 1, output=lambda t, x: sigmoid(x))
+            out_b =  nengo.Node(size_in=ens_b.n_neurons, size_out = 1, output=lambda t, x: step_function(x))
 
-            nengo.Connection(conv3_feat.neurons, ens_x, synapse=0.0001,)
-            nengo.Connection(conv3_feat.neurons, ens_y, synapse=0.0001,)
-            nengo.Connection(conv3_feat.neurons, ens_b, synapse=0.0001,)
+            nengo.Connection(conv3_feat.neurons, ens_x.neurons, synapse=0.0001,)
+            nengo.Connection(conv3_feat.neurons, ens_y.neurons, synapse=0.0001,)
+            nengo.Connection(conv3_feat.neurons, ens_b.neurons, synapse=0.0001,)
 
-            nengo.Connection(ens_x, out_x, synapse=0.0001,)
-            nengo.Connection(ens_y, out_y, synapse=0.0001,)
-            nengo.Connection(ens_b, out_b, synapse=0.0001,)
+            nengo.Connection(ens_x.neurons, out_x, synapse=0.0001,)
+            nengo.Connection(ens_y.neurons, out_y, synapse=0.0001,)
+            nengo.Connection(ens_b.neurons, out_b, synapse=0.0001,)
             # out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv3_feat)
-            out_x = nengo.Probe(out_x, label="out_p")
-            out_x_filt = nengo.Probe(out_x_filt, synapse=0.001, label="out_p_filt")
-            out_y = nengo.Probe(out_y, label="out_p")
-            out_y_filt = nengo.Probe(out_y_filt, synapse=0.001, label="out_p_filt")
-            out_b = nengo.Probe(out_b, label="out_p")
-            out_b_filt = nengo.Probe(out_b_filt, synapse=0.001, label="out_p_filt")
+            p_x = nengo.Probe(out_x, label="out_p")
+            p_x_filt = nengo.Probe(out_x, synapse=0.001, label="out_p_filt")
+            p_y = nengo.Probe(out_y, label="out_p")
+            p_y_filt = nengo.Probe(out_y, synapse=0.001, label="out_p_filt")
+            p_b = nengo.Probe(out_b, label="out_p")
+            p_b_filt = nengo.Probe(out_b, synapse=0.001, label="out_p_filt")
 
-            return model, inp, out_x, out_x_filt, out_y, out_y_filt, out_b, out_b_filt
+            return model, inp, p_x, p_x_filt, p_y, p_y_filt, p_b, p_b_filt
         
 class LMUCell(nengo.Network):
     def __init__(self, units, order, theta, input_d, **kwargs):
