@@ -239,8 +239,8 @@ class LMU():
             # record output. note that we set keep_history=False above, so this will
             # only record the output on the last timestep (which is all we need
             # on this task)
-            out_p = nengo.Probe(out, synapse = 0.01)
-            out_p_filt = nengo.Probe(out, synapse = 0.01)
+            out_p = nengo.Probe(out)
+            out_p_filt = nengo.Probe(out, synapse = 0.001)
             return model, inp, out_p, out_p_filt
 # import nengo
 
