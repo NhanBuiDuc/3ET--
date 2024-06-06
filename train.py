@@ -178,7 +178,7 @@ if __name__ == "__main__":
     with tf.device(device):
         if train:
             sim.compile(
-                optimizer=tf.optimizers.Adamn(),
+                optimizer=tf.optimizers.Adam(),
                 loss={
                     out_p: tf.losses.MeanSquaredError(),
                     # out_p_filt: tf.losses.MeanSquaredError(),
