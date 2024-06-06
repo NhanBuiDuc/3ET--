@@ -175,35 +175,36 @@ if __name__ == "__main__":
     test_y = train_data_orig.test_y
 
     train = True
+    sim.compile(
+                    optimizer=tf.optimizers.Adam(),
+                    loss={
+                        out_p: tf.losses.MeanSquaredError(),
+                        # out_p_filt: tf.losses.MeanSquaredError(),
+                    },
+                    metrics={
+                        # out_p: [
+                        #     p1_accuracy,
+                        #     p3_accuracy,
+                        #     p5_accuracy,
+                        #     p10_accuracy,
+                        #     p15_accuracy,
+                        #     tf.keras.losses.MeanAbsoluteError(),
+                        #     tf.keras.losses.MeanSquaredError()
+                        # ],
+                        out_p_filt: [                    
+                            p1_accuracy,
+                            p3_accuracy,
+                            p5_accuracy,
+                            p10_accuracy,
+                            p15_accuracy,
+                            tf.keras.losses.MeanAbsoluteError(),
+                            tf.keras.losses.MeanSquaredError()
+                        ]
+                    }
+                )
     with tf.device(device):
         if train:
-            sim.compile(
-                optimizer=tf.optimizers.Adam(),
-                loss={
-                    out_p: tf.losses.MeanSquaredError(),
-                    # out_p_filt: tf.losses.MeanSquaredError(),
-                },
-                metrics={
-                    # out_p: [
-                    #     p1_accuracy,
-                    #     p3_accuracy,
-                    #     p5_accuracy,
-                    #     p10_accuracy,
-                    #     p15_accuracy,
-                    #     tf.keras.losses.MeanAbsoluteError(),
-                    #     tf.keras.losses.MeanSquaredError()
-                    # ],
-                    out_p_filt: [                    
-                        p1_accuracy,
-                        p3_accuracy,
-                        p5_accuracy,
-                        p10_accuracy,
-                        p15_accuracy,
-                        tf.keras.losses.MeanAbsoluteError(),
-                        tf.keras.losses.MeanSquaredError()
-                    ]
-                }
-            )
+            
             # sim.fit(x=train_x, y=train_y)
             # val_loss = sim.evaluate(x=val_x, y=val_y)
             best_val_loss = float("inf")
