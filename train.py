@@ -20,7 +20,29 @@ from nengo_model import SpikingNet, TestNet, LMU, LMUConv
 import nengo_dl
 import tensorflow as tf
 import numpy as np
+def combined_p_tolerance_accuracy(y_true_x, y_true_y, y_pred_x, y_pred_y, tolerance, width_scale, height_scale):
+    y_true = tf.stack([y_true_x, y_true_y], axis=-1)
+    y_pred = tf.stack([y_pred_x, y_pred_y], axis=-1)
 
+    diff = tf.abs(y_true - y_pred)
+    diff = diff * tf.constant([width_scale, height_scale], dtype=tf.float32)
+    within_tolerance = tf.reduce_sum(tf.cast(diff <= tolerance, tf.float32), axis=-1)
+    
+    accuracy = tf.reduce_mean(tf.cast(within_tolerance == 2, tf.float32))
+    return accuracy
+def create_combined_metric(tolerance):
+    def combined_metric(y_true, y_pred):
+        y_true_x, y_true_y = y_true[:, :, 0], y_true[:, :, 1]
+        y_pred_x, y_pred_y = y_pred[:, :, 0], y_pred[:, :, 1]
+        return combined_p_tolerance_accuracy(y_true_x, y_true_y, y_pred_x, y_pred_y, tolerance, args.sensor_width * args.spatial_factor, args.sensor_height * args.spatial_factor)
+    return combined_metric
+
+# Define combined metrics for different tolerances
+combined_p1_accuracy = create_combined_metric(tolerance=1)
+combined_p3_accuracy = create_combined_metric(tolerance=3)
+combined_p5_accuracy = create_combined_metric(tolerance=5)
+combined_p10_accuracy = create_combined_metric(tolerance=10)
+combined_p15_accuracy = create_combined_metric(tolerance=15)
 def p_tolerance_accuracy(y_true, y_pred, tolerance, width_scale, height_scale):
     """
     Custom metric to calculate the pixel-tolerance accuracy.
@@ -183,7 +205,7 @@ if __name__ == "__main__":
             out_y: tf.losses.MeanSquaredError(),
             out_b: tf.losses.MeanSquaredError(),
         },
-        #metrics={
+        metrics={
             # out_p: [
             #     p1_accuracy,
             #     p3_accuracy,
@@ -202,7 +224,25 @@ if __name__ == "__main__":
             #     tf.keras.losses.MeanAbsoluteError(),
             #     tf.keras.losses.MeanSquaredError()
             # ]
-        #}
+            out_x: [
+                combined_p1_accuracy,
+                combined_p3_accuracy,
+                combined_p5_accuracy,
+                combined_p10_accuracy,
+                combined_p15_accuracy,
+                tf.keras.losses.MeanAbsoluteError(),
+                tf.keras.losses.MeanSquaredError()
+            ],
+            out_y: [                    
+                combined_p1_accuracy,
+                combined_p3_accuracy,
+                combined_p5_accuracy,
+                combined_p10_accuracy,
+                combined_p15_accuracy,
+                tf.keras.losses.MeanAbsoluteError(),
+                tf.keras.losses.MeanSquaredError()
+            ]
+        }
     )
     with tf.device(device):
         if train:
