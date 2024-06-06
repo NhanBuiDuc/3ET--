@@ -129,20 +129,20 @@ class TestNet:
 
             conv1_feat = nengo.Ensemble(
 
-                n_neurons = 100, dimensions = np.prod(conv1_transform.output_shape.shape), neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 3, neuron_type = nengo.LIF(),
             )
             conv2_feat = nengo.Ensemble(
 
-                n_neurons = 100, dimensions = np.prod(conv2_transform.output_shape.shape), neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 3, neuron_type = nengo.LIF(),
             )
             conv3_feat = nengo.Ensemble(
 
-                n_neurons = 100, dimensions = np.prod(conv3_transform.output_shape.shape), neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 3, neuron_type = nengo.LIF(),
             )
 
-            nengo.Connection(pre = inp, post = conv1_feat, synapse = 0.05, transform=conv1_transform)
-            nengo.Connection(pre = conv1_feat, post = conv2_feat, synapse = 0.05, transform=conv2_transform)
-            nengo.Connection(pre = conv2_feat, post = conv3_feat, synapse = 0.05, transform=conv3_transform)
+            nengo.Connection(pre = inp, post = conv1_feat.neurons, synapse = 0.05, transform=conv1_transform)
+            nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.05, transform=conv2_transform)
+            nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.05, transform=conv3_transform)
 
             out = nengo.Node(size_in=conv3_feat.dimensions, size_out = 3, output=lambda t, x: sigmoid(x))
             nengo.Connection(conv3_feat, out, synapse=None,)
