@@ -1,4 +1,5 @@
 from colorama import init
+from matplotlib import transforms
 from sklearn.model_selection import learning_curve
 import nengo
 import tensorflow as tf
@@ -149,7 +150,7 @@ class TestNet:
             out = nengo.Node(size_in=conv3_feat.neurons.size_out, size_out = 3)
             out_sigmoid = nengo.Node(size_in=out.size_out, size_out = 3)
             nengo.Connection(conv3_feat.neurons, out, synapse=None)
-            nengo.Connection(out, out_sigmoid, synapse=None, function= sigmoid_activation)
+            nengo.Connection(out, out_sigmoid, synapse=None, transform= sigmoid_activation)
             # out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv3_feat)
             out_p = nengo.Probe(out, label="out_p")
             out_p_filt = nengo.Probe(out, synapse=0.01, label="out_p_filt")
