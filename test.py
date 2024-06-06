@@ -118,7 +118,7 @@ def main(args):
     #     json.dump(vars(args), f)
     device = "/gpu:3"
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = LMU().build_model()
+    model, inp, out_p, out_p_filt = TestNet().build_model()
     minibatch_size = 1
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size)
     sim.compile(
