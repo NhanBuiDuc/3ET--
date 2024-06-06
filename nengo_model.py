@@ -256,7 +256,7 @@ class LMUConv():
                 stateful=True,
                 keep_history=True,
             )
-            inp = nengo.Node(size_in=0, output = np.zeros(self.input_shape[1] * self.input_shape[2]))
+            inp = nengo.Node(np.zeros(self.input_shape[0] * self.input_shape[1]))
             print(np.prod(self.input_shape))
             print("Output: ", inp.size_out)
             
