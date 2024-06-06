@@ -146,7 +146,7 @@ class TestNet:
             nengo.Connection(pre = conv1_feat.neurons, post = conv2_feat.neurons, synapse = 0.05, transform=conv2_transform)
             nengo.Connection(pre = conv2_feat.neurons, post = conv3_feat.neurons, synapse = 0.05, transform=conv3_transform)
 
-            out = nengo.Node(size_in=3)
+            out = nengo.Node(size_in=conv3_feat.neurons.size_out, output = sigmoid_activation)
             nengo.Connection(conv3_feat.neurons, out, synapse=None)
             # out = nengo_dl.Layer(tf.keras.layers.Dense(units=3, activation=tf.nn.sigmoid))(conv3_feat)
             out_p = nengo.Probe(out, label="out_p")
