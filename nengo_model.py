@@ -207,16 +207,21 @@ class TestNet:
                 dimensions=residual_h.dimensions,
                 neuron_type=self.neuron_type
             )
-           # Perform dot product between residual_h and residual_v
-            dot_product_transform = np.dot(np.ones((residual_h.n_neurons, 1)), np.ones((residual_v.n_neurons, 1)).T)
-
-            nengo.Connection(residual_h.neurons, attention_h.neurons, transform=dot_product_transform, synapse=0.001)
-            nengo.Connection(residual_v.neurons, attention_h.neurons, transform=dot_product_transform.T, synapse=0.001)
+            attention_v = nengo.Ensemble(
+                n_neurons=residual_v.n_neurons,
+                dimensions=residual_v.dimensions,
+                neuron_type=self.neuron_type
+            )
+            # Perform dot product between residual_h and residual_v
+            h_dot_product_transform = np.dot(np.ones((residual_h.n_neurons, 1)), np.ones((residual_v.n_neurons, 1)).T)
+            v_dot_product_transform = np.dot(np.ones((residual_v.n_neurons, 1)), np.ones((residual_h.n_neurons, 1)).T)
+            nengo.Connection(residual_h.neurons, attention_h.neurons, transform=h_dot_product_transform, synapse=0.001)
+            nengo.Connection(residual_v.neurons, attention_v.neurons, transform=v_dot_product_transform.T, synapse=0.001)
             # temp = attention_h(residual_h, residual_h)
             # attention_v = nengo_dl.Layer(tf.keras.layers.Attention())([residual_v, residual_v])
             # Dense layers for final predictions
             ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(attention_h)
-            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(attention_h)
+            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(attention_v)
             
             # concatenence_ens = nengo.Ensemble(
             #     n_neurons=np.prod(conv1_transform_v.output_shape.shape), 
