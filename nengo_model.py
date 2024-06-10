@@ -77,7 +77,26 @@ class SpikingNet:
 
 def sigmoid_activation(data):
     return 1 / (1 + np.exp(-data))
-        
+
+def attention(x):
+
+    Q = x[0]
+    K = x[1]
+    V = x[2]
+    # Calculate the dot product of Q and K
+    score = Q * K
+    
+    # Scale the score by the square root of the dimension of key vectors
+    score /= np.sqrt(1)  # Assuming the dimension of key vectors is 1 (scalar)
+    
+    # Apply softmax to obtain attention weight
+    attention_weight = np.exp(score - np.max(score)) / np.sum(np.exp(score - np.max(score)), axis=0)
+    
+    # Calculate the weighted sum using attention weight and V
+    output = attention_weight * V
+    
+    return output
+
 class TestNet:
     def __init__(self, lr=0.0001):
         self.neuron_type = nengo.LIF(amplitude=0.001)
@@ -203,25 +222,40 @@ class TestNet:
 
             # Create attention_h ensemble
             attention_h = nengo.Ensemble(
-                n_neurons=residual_h.n_neurons,
-                dimensions=residual_h.dimensions,
+                n_neurons=1,
+                dimensions=3,
                 neuron_type=self.neuron_type
             )
+            key_h = nengo.Ensemble(
+                n_neurons=1,
+                dimensions=1,
+                neuron_type=self.neuron_type
+            )
+
             attention_v = nengo.Ensemble(
-                n_neurons=residual_v.n_neurons,
-                dimensions=residual_v.dimensions,
+                n_neurons=1,
+                dimensions=3,
                 neuron_type=self.neuron_type
             )
-            # Perform dot product between residual_h and residual_v
-            h_dot_product_transform = np.dot(np.ones((residual_h.n_neurons, 1)), np.ones((residual_v.n_neurons, 1)).T)
-            v_dot_product_transform = np.dot(np.ones((residual_v.n_neurons, 1)), np.ones((residual_h.n_neurons, 1)).T)
-            nengo.Connection(residual_h.neurons, attention_h.neurons, transform=h_dot_product_transform.T, synapse=0.001)
-            nengo.Connection(residual_v.neurons, attention_v.neurons, transform=v_dot_product_transform.T, synapse=0.001)
+            key_v = nengo.Ensemble(
+                n_neurons=1,
+                dimensions=1,
+                neuron_type=self.neuron_type
+            )
+            nengo.Connection(residual_h, attention_h[0], synapse=0.001)
+            nengo.Connection(residual_v, attention_h[1], synapse=0.001)
+            nengo.Connection(residual_h, attention_h[2], synapse=0.001)
+            nengo.Connection(attention_h, key_h, function=attention, synapse=0.001)
+
+            nengo.Connection(residual_v, attention_v[0], synapse=0.001)
+            nengo.Connection(residual_h, attention_v[1], synapse=0.001)
+            nengo.Connection(residual_v, attention_v[2], synapse=0.001)
+            nengo.Connection(attention_v, key_v, function=attention, synapse=0.001)
             # temp = attention_h(residual_h, residual_h)
             # attention_v = nengo_dl.Layer(tf.keras.layers.Attention())([residual_v, residual_v])
             # Dense layers for final predictions
-            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(attention_h)
-            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(attention_v)
+            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(key_h)
+            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(key_v)
             
             # concatenence_ens = nengo.Ensemble(
             #     n_neurons=np.prod(conv1_transform_v.output_shape.shape), 
