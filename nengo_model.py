@@ -202,8 +202,8 @@ class TestNet:
                 neuron_type=self.neuron_type
             )
             # Connections for horizontal features
-            nengo.Connection(inp, conv1_feat_h.neurons, transform= conv1_transform_h, synapse=0.001)
-            nengo.Connection(conv1_feat_h.neurons, conv2_feat_h.neurons, transform=conv2_transform_h, synapse=0.001)
+            nengo.Connection(inp, conv1_feat_h.neurons, transform= conv1_transform_h, synapse=None)
+            nengo.Connection(conv1_feat_h.neurons, conv2_feat_h.neurons, transform=conv2_transform_h, synapse=None)
             nengo.Connection(conv2_feat_h.neurons, conv3_feat_h.neurons, transform=conv3_transform_h, synapse=None)
             
             nengo.Connection(conv1_feat_h.neurons, residual_h.neurons[0:conv1_feat_h.neurons.size_out], transform=nengo.dists.Uniform(low=-2, high=2))
@@ -212,8 +212,8 @@ class TestNet:
 
             # nengo.Connection(conv3_feat_v.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out:], transform=nengo.dists.Uniform(low=-2, high=2))
             # Connections for vertical features
-            nengo.Connection(inp, conv1_feat_v.neurons, transform=conv1_transform_v, synapse=0.001)
-            nengo.Connection(conv1_feat_v.neurons, conv2_feat_v.neurons, transform=conv2_transform_v, synapse=0.001)
+            nengo.Connection(inp, conv1_feat_v.neurons, transform=conv1_transform_v, synapse=None)
+            nengo.Connection(conv1_feat_v.neurons, conv2_feat_v.neurons, transform=conv2_transform_v, synapse=None)
             nengo.Connection(conv2_feat_v.neurons, conv3_feat_v.neurons, transform=conv3_transform_v, synapse=None)
 
             nengo.Connection(conv1_feat_v.neurons, residual_v.neurons[0:conv1_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-2, high=2))
@@ -222,23 +222,23 @@ class TestNet:
 
             # Create attention_h ensemble
             attention_h = nengo.Ensemble(
-                n_neurons=1,
+                n_neurons=1000,
                 dimensions=3,
                 neuron_type=self.neuron_type
             )
             key_h = nengo.Ensemble(
-                n_neurons=1,
+                n_neurons=1000,
                 dimensions=1,
                 neuron_type=self.neuron_type
             )
 
             attention_v = nengo.Ensemble(
-                n_neurons=1,
+                n_neurons=1000,
                 dimensions=3,
                 neuron_type=self.neuron_type
             )
             key_v = nengo.Ensemble(
-                n_neurons=1,
+                n_neurons=1000,
                 dimensions=1,
                 neuron_type=self.neuron_type
             )
@@ -248,7 +248,7 @@ class TestNet:
             nengo.Connection(attention_h, key_h, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
 
             nengo.Connection(residual_v, attention_v[0], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
-            nengo.Connection(residual_h, attention_v[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
+            nengo.Connection(residual_v, attention_v[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
             nengo.Connection(residual_v, attention_v[2], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
             nengo.Connection(attention_v, key_v, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
             # temp = attention_h(residual_h, residual_h)
