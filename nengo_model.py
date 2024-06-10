@@ -173,7 +173,7 @@ class TestNet:
                 neuron_type=self.neuron_type
             )
             residual_h = nengo.Ensemble(
-                n_neurons=np.prod(conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out + conv3_feat_v.neurons.size_out), 
+                n_neurons=np.prod(conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out), 
                 dimensions=1,
                 neuron_type=self.neuron_type
             )
@@ -189,8 +189,9 @@ class TestNet:
             
             nengo.Connection(conv1_feat_h.neurons, residual_h.neurons[0:conv1_feat_h.neurons.size_out], transform=nengo.dists.Uniform(low=-2, high=2))
             nengo.Connection(conv2_feat_h.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out:conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out],  transform=nengo.dists.Uniform(low=-2, high=2))
-            nengo.Connection(conv3_feat_h.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out : conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out], transform=nengo.dists.Uniform(low=-2, high=2))
-            nengo.Connection(conv3_feat_v.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out:], transform=nengo.dists.Uniform(low=-2, high=2))
+            nengo.Connection(conv3_feat_h.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out :], transform=nengo.dists.Uniform(low=-2, high=2))
+
+            # nengo.Connection(conv3_feat_v.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out:], transform=nengo.dists.Uniform(low=-2, high=2))
             # Connections for vertical features
             nengo.Connection(inp, conv1_feat_v.neurons, transform=conv1_transform_v, synapse=0.001)
             nengo.Connection(conv1_feat_v.neurons, conv2_feat_v.neurons, transform=conv2_transform_v, synapse=0.001)
@@ -199,7 +200,8 @@ class TestNet:
             nengo.Connection(conv1_feat_v.neurons, residual_v.neurons[0:conv1_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-2, high=2))
             nengo.Connection(conv2_feat_v.neurons, residual_v.neurons[conv1_feat_v.neurons.size_out:conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out],  transform=nengo.dists.Uniform(low=-2, high=2))
             nengo.Connection(conv3_feat_v.neurons, residual_v.neurons[conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out:], transform=nengo.dists.Uniform(low=-2, high=2))
-
+            attention_h = nengo_dl.Layer(tf.keras.layers.Attention())([residual_h, residual_h])
+            attention_v = nengo_dl.Layer(tf.keras.layers.Attention())([residual_v, residual_v])
             # Dense layers for final predictions
             ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_h)
             ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_v)
