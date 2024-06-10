@@ -245,12 +245,12 @@ class TestNet:
             nengo.Connection(residual_h, attention_h[0], synapse=0.001)
             nengo.Connection(residual_v, attention_h[1], synapse=0.001)
             nengo.Connection(residual_h, attention_h[2], synapse=0.001)
-            nengo.Connection(attention_h, key_h, function=attention, synapse=0.001)
+            nengo.Connection(attention_h, key_h, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
 
             nengo.Connection(residual_v, attention_v[0], synapse=0.001)
             nengo.Connection(residual_h, attention_v[1], synapse=0.001)
             nengo.Connection(residual_v, attention_v[2], synapse=0.001)
-            nengo.Connection(attention_v, key_v, function=attention, synapse=0.001)
+            nengo.Connection(attention_v, key_v, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
             # temp = attention_h(residual_h, residual_h)
             # attention_v = nengo_dl.Layer(tf.keras.layers.Attention())([residual_v, residual_v])
             # Dense layers for final predictions
