@@ -215,7 +215,7 @@ class TestNet:
             # Perform dot product between residual_h and residual_v
             h_dot_product_transform = np.dot(np.ones((residual_h.n_neurons, 1)), np.ones((residual_v.n_neurons, 1)).T)
             v_dot_product_transform = np.dot(np.ones((residual_v.n_neurons, 1)), np.ones((residual_h.n_neurons, 1)).T)
-            nengo.Connection(residual_h.neurons, attention_h.neurons, transform=h_dot_product_transform, synapse=0.001)
+            nengo.Connection(residual_h.neurons, attention_h.neurons, transform=h_dot_product_transform.T, synapse=0.001)
             nengo.Connection(residual_v.neurons, attention_v.neurons, transform=v_dot_product_transform.T, synapse=0.001)
             # temp = attention_h(residual_h, residual_h)
             # attention_v = nengo_dl.Layer(tf.keras.layers.Attention())([residual_v, residual_v])
