@@ -106,6 +106,13 @@ class TestNet:
         with nengo.Network() as model:
             def sigmoid(x):
                 return 1 / (1 + np.exp(-x))
+            # Set default gain and bias for all ensembles
+            # model.config[nengo.Ensemble].gain = nengo.dists.Uniform(0.5, 2.0)
+            # model.config[nengo.Ensemble].bias = nengo.dists.Uniform(-1.0, 1.0)
+            # model.config[nengo.Ensemble].radius = 3.0
+            # model.config[nengo.Ensemble].max_rates = nengo.dists.Choice([50, 100, 150])
+            # model.config[nengo.Ensemble].intercepts = nengo.dists.Uniform(-0.5, 0.5)
+
             # model.config[nengo.Ensemble].max_rates = nengo.dists.Choice([100])           
             inp = nengo.Node(output=np.zeros(self.input_shape[1] * self.input_shape[2]))
             # inp_ens = nengo.Ensemble(
@@ -163,43 +170,43 @@ class TestNet:
             conv1_feat_h = nengo.Ensemble(
                 n_neurons=np.prod(conv1_transform_h.output_shape.shape), 
                 dimensions=1,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
             conv2_feat_h = nengo.Ensemble(
                 n_neurons=np.prod(conv2_transform_h.output_shape.shape), 
                 dimensions=1,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
             conv3_feat_h = nengo.Ensemble(
                 n_neurons=np.prod(conv3_transform_h.output_shape.shape), 
                 dimensions=1,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
 
             conv1_feat_v = nengo.Ensemble(
                 n_neurons=np.prod(conv1_transform_v.output_shape.shape), 
                 dimensions=1,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
             conv2_feat_v = nengo.Ensemble(
                 n_neurons=np.prod(conv2_transform_v.output_shape.shape), 
                 dimensions=1,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
             conv3_feat_v = nengo.Ensemble(
                 n_neurons=np.prod(conv3_transform_v.output_shape.shape), 
                 dimensions=1 ,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
             residual_h = nengo.Ensemble(
                 n_neurons=np.prod(conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out), 
                 dimensions=1,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
             residual_v = nengo.Ensemble(
                 n_neurons=np.prod(conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out), 
                 dimensions=1,
-                neuron_type=self.neuron_type
+                neuron_type=self.neuron_type,
             )
             # Connections for horizontal features
             nengo.Connection(inp, conv1_feat_h.neurons, transform= conv1_transform_h, synapse=None)
@@ -243,14 +250,14 @@ class TestNet:
                 neuron_type=self.neuron_type
             )
             nengo.Connection(residual_h, attention_h[0], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
-            nengo.Connection(residual_h, attention_h[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
-            nengo.Connection(residual_h, attention_h[2], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
-            nengo.Connection(attention_h, key_h, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
+            nengo.Connection(residual_h, attention_h[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
+            nengo.Connection(residual_h, attention_h[2], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
+            nengo.Connection(attention_h, key_h, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
 
             nengo.Connection(residual_v, attention_v[0], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
-            nengo.Connection(residual_v, attention_v[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
-            nengo.Connection(residual_v, attention_v[2], transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
-            nengo.Connection(attention_v, key_v, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=0.001)
+            nengo.Connection(residual_v, attention_v[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
+            nengo.Connection(residual_v, attention_v[2], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
+            nengo.Connection(attention_v, key_v, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
             # temp = attention_h(residual_h, residual_h)
             # attention_v = nengo_dl.Layer(tf.keras.layers.Attention())([residual_v, residual_v])
             # Dense layers for final predictions
@@ -429,15 +436,15 @@ class LMUConv():
 
             conv1_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv1_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(), radius = 2.0
             )
             conv2_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv2_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv2_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(), radius = 2.0
             )
             conv3_feat = nengo.Ensemble(
 
-                n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(),
+                n_neurons = np.prod(conv3_transform.output_shape.shape), dimensions = 1000, neuron_type = nengo.LIF(), radius = 2.0
             )
 
             nengo.Connection(pre = input_ens.neurons, post = conv1_feat.neurons, synapse = 0.01, transform=conv1_transform)
