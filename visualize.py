@@ -4,7 +4,7 @@ import os
 
 from sklearn.model_selection import train_test_split
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -138,10 +138,12 @@ if __name__ == "__main__":
     with open(os.path.join('./configs', config_file), 'r') as f:
         config = json.load(f)
     args = argparse.Namespace(**config)
-    device = "/gpu:3"
+    device = "/gpu:0"
     
     # Define your model, optimizer, and criterion
-    model, inp, out_p, out_p_filt = TestNet().build_model()
+    # model, inp, out_p, out_p_filt = TestNet().build_model()
+    # model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet().build_model()
+    model, inp, p_x, p_y, p_x_filt, p_y_filt = TestNet().build_model()
     minibatch_size = 3
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
 
@@ -185,40 +187,14 @@ if __name__ == "__main__":
     test_y = train_data_orig.test_y
 
     train = True
-    sim.compile(
-                    optimizer=tf.optimizers.Adam(),
-                    loss={
-                        out_p: tf.losses.MeanSquaredError(),
-                        # out_p_filt: tf.losses.MeanSquaredError(),
-                    },
-                    metrics={
-                        # out_p: [
-                        #     p1_accuracy,
-                        #     p3_accuracy,
-                        #     p5_accuracy,
-                        #     p10_accuracy,
-                        #     p15_accuracy,
-                        #     tf.keras.losses.MeanAbsoluteError(),
-                        #     tf.keras.losses.MeanSquaredError()
-                        # ],
-                        out_p_filt: [                    
-                            p1_accuracy,
-                            p3_accuracy,
-                            p5_accuracy,
-                            p10_accuracy,
-                            p15_accuracy,
-                            tf.keras.losses.MeanAbsoluteError(),
-                            tf.keras.losses.MeanSquaredError()
-                        ]
-                    }
-                )
+
     with tf.device(device):
         # Load the best model parameters
         sim.load_params("./best_model")
         # Loop through the dataset in minibatches of size 3
-        for i in range(0, len(train_x), minibatch_size):
-            batch_x = train_x[i:i+minibatch_size]
-            batch_y = train_y[i:i+minibatch_size]
+        for i in range(0, len(val_x), minibatch_size):
+            batch_x = val_x[i:i+minibatch_size]
+            batch_y = val_y[i:i+minibatch_size]
 
             if len(batch_x) < minibatch_size:
                 # Skip the last batch if it's smaller than minibatch_size
@@ -229,19 +205,30 @@ if __name__ == "__main__":
 
             # Predict the output for the given batch_x
             prediction = sim.predict(x={inp: batch_x})
+            out_p_x = prediction[p_x]
+            out_p_x_filt = prediction[p_x_filt]
 
-            # Extract the required data for plotting
-            prediction_data = prediction[out_p]
-            prediction_data_filt = prediction[out_p_filt]
-            label_data = batch_y
+            out_p_y = prediction[p_y]
+            out_p_y_filt = prediction[p_y_filt]
+
+            # out_p_x *= 640 * factor
+            # out_p_y *= 480 * factor
+
+            # out_p_x_filt *= 640 * factor
+            # out_p_y_filt *= 480 * factor
+            out_probe = np.concatenate((out_p_x, out_p_y), axis=-1)
+            
+            out_probe_filt = np.concatenate((out_p_x_filt, out_p_y_filt), axis=-1)
+
+            label_data = batch_y.numpy()
 
             # Plot the results
             for j in range(minibatch_size):
                 plt.figure()
-                plt.plot(np.arange(30), prediction_data[j, :, 0], label="pred_x")  # Assuming plotting the first dimension
-                plt.plot(np.arange(30), prediction_data[j, :, 1], label="pred_y")
-                plt.plot(np.arange(30), prediction_data_filt[j, :, 0], label="pred_x_filter")  # Assuming plotting the first dimension
-                plt.plot(np.arange(30), prediction_data_filt[j, :, 1], label="pred_y_filter")
+                # plt.plot(np.arange(30), out_probe[j, :, 0], label="pred_x")  # Assuming plotting the first dimension
+                # plt.plot(np.arange(30), out_probe[j, :, 1], label="pred_y")
+                plt.plot(np.arange(30), out_probe_filt[j, :, 0], label="pred_x_filter")  # Assuming plotting the first dimension
+                plt.plot(np.arange(30), out_probe_filt[j, :, 1], label="pred_y_filter")
                 plt.plot(np.arange(30), label_data[j, :, 0], label="label_x")  # Assuming plotting the first dimension
                 plt.plot(np.arange(30), label_data[j, :, 1], label="label_y")
                 plt.legend()

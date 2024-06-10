@@ -119,7 +119,8 @@ def main(args):
     device = "/gpu:0"
     # Define your model, optimizer, and criterion
     # model, inp, out_p, out_p_filt = TestNet().build_model()
-    model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet().build_model()
+    # model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet(lr=lr).build_model()
+    model, inp, p_x, p_y, p_x_filt, p_y_filt = TestNet().build_model()
     minibatch_size = 1
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
     # sim.compile(
@@ -230,8 +231,8 @@ def main(args):
                 tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
                 
                 output = sim.predict(tf_data)
-                out_probe = output[out_p]
-                out_probe_filt = output[out_p_filt]
+                out_probe = output[p_x]
+                out_probe_filt = output[p_x_filt]
 
                 out_probe[..., 0] *= 640 * factor
                 out_probe[..., 1] *= 480 * factor

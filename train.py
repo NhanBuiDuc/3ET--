@@ -151,10 +151,11 @@ if __name__ == "__main__":
         config = json.load(f)
     args = argparse.Namespace(**config)
     device = "/gpu:0"
-    
+    lr = args.lr
     # Define your model, optimizer, and criterion
     # model, inp, out_p, out_p_filt = TestNet().build_model()
-    model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet().build_model()
+    # model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet(lr=lr).build_model()
+    model, inp, p_x, p_y, p_x_filt, p_y_filt = TestNet(lr=lr).build_model()
     minibatch_size = 3
     sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
 
@@ -203,7 +204,7 @@ if __name__ == "__main__":
         loss={
             p_x: tf.losses.MeanSquaredError(),
             p_y: tf.losses.MeanSquaredError(),
-            p_b: tf.losses.MeanSquaredError(),
+            # p_b: tf.losses.MeanSquaredError(),
         },
         metrics={
             # out_p: [
@@ -244,7 +245,7 @@ if __name__ == "__main__":
             # ]
         }
     )
-    with tf.device(device):
+with tf.device(device):
         if isTrain:
             
             # sim.fit(x=train_x, y=train_y)
@@ -255,11 +256,11 @@ if __name__ == "__main__":
                 print(f"epoch {epoch}")
                 sim.fit(
                     # x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 1:2]})
-                    x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 0:1], p_b: train_y[:, :, 1:2], 
-                                        p_x_filt: train_y[:, :, 0:1], p_y_filt: train_y[:, :, 0:1], p_b_filt: train_y[:, :, 1:2]})
+                    x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 0:1],
+                                        p_x_filt: train_y[:, :, 0:1], p_y_filt: train_y[:, :, 0:1]})
                     # x={inp: train_x},  y={p_x: train_y, p_x_filt: train_y})
-                losses = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2], p_b: val_y[:, :, 2:3],
-                                                           p_x_filt: val_y[:, :, 0:1], p_y_filt: val_y[:, :, 1:2], p_b_filt: val_y[:, :, 2:3]})
+                losses = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2],
+                                                           p_x_filt: val_y[:, :, 0:1], p_y_filt: val_y[:, :, 1:2]})
                 # val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y, p_x_filt: val_y})['loss']
                 val_loss = losses['loss']
                 print(f"val_loss: {losses}")
@@ -273,8 +274,8 @@ if __name__ == "__main__":
                 if patience_counter >= 50:
                     print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
                     break
-            test = sim.evaluate(x={inp: test_x}, y={p_x: test_y[:, :, 0:1], p_y: test_y[:, :, 1:2], p_b: test_y[:, :, 2:3],
-                                                    p_x_filt: test_y[:, :, 0:1], p_y_filt: test_y[:, :, 1:2], p_b_filt: test_y[:, :, 2:3]})
+            test = sim.evaluate(x={inp: test_x}, y={p_x: test_y[:, :, 0:1], p_y: test_y[:, :, 1:2],
+                                                    p_x_filt: test_y[:, :, 0:1], p_y_filt: test_y[:, :, 1:2]})
             # Merge train, validation, and test sets
             combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
             combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
@@ -284,12 +285,13 @@ if __name__ == "__main__":
             # Train the best model for 50 more epochs on the combined dataset
             for epoch in range(50):
                 print(f"Additional training epoch {epoch}")
-                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
-                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
+
+                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
 
             # Evaluate the final model
-            final_loss = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
-                                                              p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
+            final_loss = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                                                              p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
             print(f"Final loss after additional training: {final_loss}")
         else:
             combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
@@ -298,5 +300,64 @@ if __name__ == "__main__":
             sim.load_params("./best_model")
             for epoch in range(50):
                 print(f"Additional training epoch {epoch}")
-                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
-                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
+                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
+                sim.save_params("./best_model")
+    # with tf.device(device):
+    #     if isTrain:
+            
+    #         # sim.fit(x=train_x, y=train_y)
+    #         # val_loss = sim.evaluate(x=val_x, y=val_y)
+    #         best_val_loss = float("inf")
+    #         patience_counter = 0
+    #         for epoch in range(args.num_epochs):
+    #             print(f"epoch {epoch}")
+    #             sim.fit(
+    #                 # x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 1:2]})
+    #                 x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 0:1], p_b: train_y[:, :, 1:2], 
+    #                                     p_x_filt: train_y[:, :, 0:1], p_y_filt: train_y[:, :, 0:1], p_b_filt: train_y[:, :, 1:2]})
+    #                 # x={inp: train_x},  y={p_x: train_y, p_x_filt: train_y})
+    #             losses = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2], p_b: val_y[:, :, 2:3],
+    #                                                        p_x_filt: val_y[:, :, 0:1], p_y_filt: val_y[:, :, 1:2], p_b_filt: val_y[:, :, 2:3]})
+    #             # val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y, p_x_filt: val_y})['loss']
+    #             val_loss = losses['loss']
+    #             print(f"val_loss: {losses}")
+    #             if val_loss < best_val_loss:
+    #                 best_val_loss = val_loss
+    #                 patience_counter = 0
+    #                 sim.save_params("./best_model")
+    #             else:
+    #                 patience_counter += 1
+    #             print(f"patient {patience_counter}")
+    #             if patience_counter >= 50:
+    #                 print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
+    #                 break
+    #         test = sim.evaluate(x={inp: test_x}, y={p_x: test_y[:, :, 0:1], p_y: test_y[:, :, 1:2], p_b: test_y[:, :, 2:3],
+    #                                                 p_x_filt: test_y[:, :, 0:1], p_y_filt: test_y[:, :, 1:2], p_b_filt: test_y[:, :, 2:3]})
+    #         # Merge train, validation, and test sets
+    #         combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
+    #         combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
+
+    #         # Load the best model
+    #         sim.load_params("./best_model")
+    #         # Train the best model for 50 more epochs on the combined dataset
+    #         for epoch in range(50):
+    #             print(f"Additional training epoch {epoch}")
+
+    #             sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
+    #                                             p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
+
+    #         # Evaluate the final model
+    #         final_loss = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
+    #                                                           p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
+    #         print(f"Final loss after additional training: {final_loss}")
+    #     else:
+    #         combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
+    #         combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
+    #         # Load the best model
+    #         # sim.load_params("./best_model")
+    #         for epoch in range(50):
+    #             print(f"Additional training epoch {epoch}")
+    #             sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2], p_b: combined_y[:, :, 2:3],
+    #                                             p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2], p_b_filt: combined_y[:, :, 2:3]})
+    #             sim.save_params("./best_model")
