@@ -192,7 +192,8 @@ def main(args):
                     stacked_data = torch.cat(accumulated_batches)
                     tf_data = tf.constant(stacked_data.cpu().detach().numpy())
                     tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
-                    
+                    # Warm-up period (e.g., 10 timesteps)
+                    # sim.run_steps(30, data=stacked_data)
                     output = sim.predict(tf_data)
                     out_p_x = output[p_x]
                     out_p_x_filt = output[p_x_filt]
