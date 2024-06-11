@@ -22,7 +22,7 @@ import nengo_dl
 import tensorflow as tf
 from nengo_model import SpikingNet, TestNet, LMU
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = '4'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 def p_acc(target, prediction, pixel_tolerances=[1,3,5,10]):
     """
     Calculate the accuracy of prediction
@@ -116,7 +116,7 @@ def main(args):
     # # also dump the args to a JSON file in MLflow artifact
     # with open(os.path.join(mlflow.get_artifact_uri(), "args.json"), 'w') as f:
     #     json.dump(vars(args), f)
-    device = "/gpu:4"
+    device = "/gpu:0"
     # Define your model, optimizer, and criterion
     # model, inp, out_p, out_p_filt = TestNet().build_model()
     # model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet(lr=lr).build_model()
@@ -182,6 +182,7 @@ def main(args):
         csv_writer_probe_filt.writerow(['row_id', 'x', 'y'])
         
         row_id = 0
+        sim.run_steps(30)
         with tf.device(device):
             for batch_idx, (data, target_placeholder) in enumerate(test_loader):
                 data = data.to(args.device)
@@ -193,7 +194,7 @@ def main(args):
                     tf_data = tf.constant(stacked_data.cpu().detach().numpy())
                     tf_data = tf.reshape(tf_data, [tf_data.shape[0], tf_data.shape[1] * tf_data.shape[2], -1])
                     # Warm-up period (e.g., 10 timesteps)
-                    # sim.run_steps(30, data=stacked_data)
+
                     output = sim.predict(tf_data)
                     out_p_x = output[p_x]
                     out_p_x_filt = output[p_x_filt]
