@@ -22,7 +22,7 @@ import nengo_dl
 import tensorflow as tf
 from nengo_model import SpikingNet, TestNet, LMU
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '4'
 def p_acc(target, prediction, pixel_tolerances=[1,3,5,10]):
     """
     Calculate the accuracy of prediction
@@ -116,7 +116,7 @@ def main(args):
     # # also dump the args to a JSON file in MLflow artifact
     # with open(os.path.join(mlflow.get_artifact_uri(), "args.json"), 'w') as f:
     #     json.dump(vars(args), f)
-    device = "/gpu:0"
+    device = "/gpu:4"
     # Define your model, optimizer, and criterion
     # model, inp, out_p, out_p_filt = TestNet().build_model()
     # model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet(lr=lr).build_model()
