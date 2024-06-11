@@ -226,58 +226,17 @@ class TestNet:
             nengo.Connection(conv1_feat_v.neurons, residual_v.neurons[0:conv1_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
             nengo.Connection(conv2_feat_v.neurons, residual_v.neurons[conv1_feat_v.neurons.size_out:conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
             nengo.Connection(conv3_feat_v.neurons, residual_v.neurons[conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out:],  transform=nengo.dists.Uniform(low=-1, high=1))
-
-            # Create attention_h ensemble
-            attention_h = nengo.Ensemble(
-                n_neurons=1000,
-                dimensions=3,
+            
+            concatenence_ens = nengo.Ensemble(
+                n_neurons=residual_v.neurons.size_out + residual_h.neurons.size_out, 
+                dimensions=10,
                 neuron_type=self.neuron_type
             )
-            key_h = nengo.Ensemble(
-                n_neurons=1000,
-                dimensions=3,
-                neuron_type=self.neuron_type
-            )
-
-            attention_v = nengo.Ensemble(
-                n_neurons=1000,
-                dimensions=3,
-                neuron_type=self.neuron_type
-            )
-            key_v = nengo.Ensemble(
-                n_neurons=1000,
-                dimensions=3,
-                neuron_type=self.neuron_type
-            )
-            nengo.Connection(residual_v, attention_h[0], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(residual_h, attention_h[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(residual_h, attention_h[2], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(attention_h, key_h, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-
-            nengo.Connection(residual_h, attention_v[0], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(residual_v, attention_v[1], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(residual_v, attention_v[2], transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(attention_v, key_v, function=attention, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-
-            final_h = nengo.Ensemble(
-                n_neurons=residual_h.neurons.size_out + key_h.neurons.size_out,
-                dimensions=1,
-                neuron_type=self.neuron_type
-            )
-            final_v = nengo.Ensemble(
-                n_neurons=residual_v.neurons.size_out + key_v.neurons.size_out,
-                dimensions=1,
-                neuron_type=self.neuron_type
-            )
-            nengo.Connection(residual_h.neurons, final_h.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(key_h.neurons, final_h.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-
-            nengo.Connection(residual_v.neurons, final_v.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(residual_v.neurons, final_v.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-
+            nengo.Connection(pre=residual_v, post=concatenence_ens.neurons[:residual_v.neurons.size_out], synapse=0.001)
+            nengo.Connection(pre=residual_h, post=concatenence_ens.neurons[residual_v.neurons.size_out:], synapse=0.001)
             # Dense layers for final predictions
-            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(final_h)
-            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(final_v)
+            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(concatenence_ens)
+            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_v)
             
             # concatenence_ens = nengo.Ensemble(
             #     n_neurons=np.prod(conv1_transform_v.output_shape.shape), 
