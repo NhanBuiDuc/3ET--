@@ -126,19 +126,19 @@ class TestNet:
             
             # Horizontal convolutional layers with (1, 5) kernel
             conv1_transform_h = nengo.Convolution(
-                n_filters=128,
+                n_filters=64,
                 input_shape=self.input_shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv2_transform_h = nengo.Convolution(
-                n_filters=128,
+                n_filters=64,
                 input_shape=conv1_transform_h.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv3_transform_h = nengo.Convolution(
-                n_filters=128,
+                n_filters=64,
                 input_shape=conv2_transform_h.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
@@ -157,19 +157,19 @@ class TestNet:
             # )
             # Vertical convolutional layers with (5, 1) kernel
             conv1_transform_v = nengo.Convolution(
-                n_filters=128,
+                n_filters=64,
                 input_shape=self.input_shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv2_transform_v = nengo.Convolution(
-                n_filters=128,
+                n_filters=64,
                 input_shape=conv1_transform_v.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv3_transform_v = nengo.Convolution(
-                n_filters=128,
+                n_filters=64,
                 input_shape=conv2_transform_v.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
@@ -192,17 +192,17 @@ class TestNet:
             # Horizontal feature extraction
             conv1_feat_h = nengo.Ensemble(
                 n_neurons=np.prod(conv1_transform_h.output_shape.shape), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
             conv2_feat_h = nengo.Ensemble(
                 n_neurons=np.prod(conv2_transform_h.output_shape.shape), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
             conv3_feat_h = nengo.Ensemble(
                 n_neurons=np.prod(conv3_transform_h.output_shape.shape), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
             # conv4_feat_h = nengo.Ensemble(
@@ -218,17 +218,17 @@ class TestNet:
             ###########################
             conv1_feat_v = nengo.Ensemble(
                 n_neurons=np.prod(conv1_transform_v.output_shape.shape), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
             conv2_feat_v = nengo.Ensemble(
                 n_neurons=np.prod(conv2_transform_v.output_shape.shape), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
             conv3_feat_v = nengo.Ensemble(
                 n_neurons=np.prod(conv3_transform_v.output_shape.shape), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
             # conv4_feat_v = nengo.Ensemble(
@@ -259,12 +259,12 @@ class TestNet:
             #######################
             residual_h = nengo.Ensemble(
                 n_neurons=np.prod(conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
             residual_v = nengo.Ensemble(
                 n_neurons=np.prod(conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out + conv3_feat_v.neurons.size_out), 
-                dimensions=10,
+                dimensions=1,
                 neuron_type=self.neuron_type,
             )
 
