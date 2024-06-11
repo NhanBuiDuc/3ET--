@@ -303,12 +303,12 @@ with tf.device(device):
                 print(f"Additional training epoch {epoch}")
                 sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
                                                 p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
-                losses = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
-                                                           p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
-                loss = losses['loss']
-                if loss < best_train_loss:
-                    best_train_loss = loss
-                    sim.save_params("./best_model")
+                # losses = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                #                                            p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
+                # loss = losses['loss']
+                # if loss < best_train_loss:
+                #     best_train_loss = loss
+                sim.save_params("./best_model")
     # with tf.device(device):
     #     if isTrain:
             

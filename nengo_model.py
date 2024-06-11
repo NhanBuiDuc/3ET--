@@ -126,25 +126,25 @@ class TestNet:
             
             # Horizontal convolutional layers with (1, 5) kernel
             conv1_transform_h = nengo.Convolution(
-                n_filters=8,
+                n_filters=128,
                 input_shape=self.input_shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv2_transform_h = nengo.Convolution(
-                n_filters=16,
+                n_filters=128,
                 input_shape=conv1_transform_h.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv3_transform_h = nengo.Convolution(
-                n_filters=32,
+                n_filters=128,
                 input_shape=conv2_transform_h.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv4_transform_h = nengo.Convolution(
-                n_filters=64,
+                n_filters=128,
                 input_shape=conv3_transform_h.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
@@ -157,19 +157,19 @@ class TestNet:
             )
             # Vertical convolutional layers with (5, 1) kernel
             conv1_transform_v = nengo.Convolution(
-                n_filters=8,
+                n_filters=128,
                 input_shape=self.input_shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv2_transform_v = nengo.Convolution(
-                n_filters=16,
+                n_filters=128,
                 input_shape=conv1_transform_v.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
             )
             conv3_transform_v = nengo.Convolution(
-                n_filters=32,
+                n_filters=128,
                 input_shape=conv2_transform_v.output_shape.shape,
                 kernel_size=(3, 3),
                 padding="same"
@@ -268,7 +268,6 @@ class TestNet:
                 neuron_type=self.neuron_type,
             )
 
-            
             nengo.Connection(conv1_feat_h.neurons, residual_h.neurons[0:conv1_feat_h.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
             nengo.Connection(conv2_feat_h.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out:conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out],  transform=nengo.dists.Uniform(low=-1, high=1))
             nengo.Connection(conv3_feat_h.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out :], transform=nengo.dists.Uniform(low=-1, high=1))
