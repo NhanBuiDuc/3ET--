@@ -248,14 +248,14 @@ class TestNet:
             nengo.Connection(conv1_feat_h.neurons, conv2_feat_h.neurons, transform=conv2_transform_h, synapse=0.001)
             nengo.Connection(conv2_feat_h.neurons, conv3_feat_h.neurons, transform=conv3_transform_h, synapse=None)
             nengo.Connection(conv3_feat_h.neurons, conv4_feat_h.neurons, transform=conv4_transform_h, synapse=None)
-            nengo.Connection(conv4_feat_h.neurons, conv4_feat_h.neurons, transform=conv5_transform_h, synapse=None)
+            nengo.Connection(conv4_feat_h.neurons, conv5_feat_h.neurons, transform=conv5_transform_h, synapse=None)
             ######################
             # Connections for vertical features
             nengo.Connection(inp, conv1_feat_v.neurons, transform=conv1_transform_v, synapse=0.001)
             nengo.Connection(conv1_feat_v.neurons, conv2_feat_v.neurons, transform=conv2_transform_v, synapse=0.001)
             nengo.Connection(conv2_feat_v.neurons, conv3_feat_v.neurons, transform=conv3_transform_v, synapse=None)
             nengo.Connection(conv3_feat_v.neurons, conv4_feat_v.neurons, transform=conv4_transform_v, synapse=None)
-            nengo.Connection(conv4_feat_v.neurons, conv4_feat_v.neurons, transform=conv5_transform_v, synapse=None)
+            nengo.Connection(conv4_feat_v.neurons, conv5_feat_v.neurons, transform=conv5_transform_v, synapse=None)
             #######################
             residual_h = nengo.Ensemble(
                 n_neurons=np.prod(conv1_feat_h.neurons.size_out + conv5_feat_h.neurons.size_out), 
