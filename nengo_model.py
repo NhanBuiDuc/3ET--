@@ -270,11 +270,11 @@ class TestNet:
                 neuron_type=self.neuron_type
             )
             nengo.Connection(residual_h.neurons, final_h.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            nengo.Connection(key_h.neurons, key_h.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
+            nengo.Connection(key_h.neurons, final_h.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
 
             nengo.Connection(residual_v.neurons, final_v.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
             nengo.Connection(residual_v.neurons, final_v.neurons, transform=nengo.dists.Uniform(low=-2, high=2), synapse=None)
-            
+
             # Dense layers for final predictions
             ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(final_h)
             ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(final_v)
