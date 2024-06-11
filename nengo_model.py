@@ -288,16 +288,16 @@ class TestNet:
             nengo.Connection(conv5_feat_v.neurons, residual_v.neurons[conv1_feat_v.neurons.size_out:],  transform=nengo.dists.Uniform(low=-1, high=1))
             ################################
 
-            concatenence_ens = nengo.Ensemble(
-                n_neurons=residual_v.neurons.size_out + residual_h.neurons.size_out, 
-                dimensions=10,
-                neuron_type=self.neuron_type
-            )
-            nengo.Connection(pre=residual_v.neurons, post=concatenence_ens.neurons[:residual_v.neurons.size_out], synapse=0.001)
-            nengo.Connection(pre=residual_h.neurons, post=concatenence_ens.neurons[residual_v.neurons.size_out:], synapse=0.001)
+            # concatenence_ens = nengo.Ensemble(
+            #     n_neurons=residual_v.neurons.size_out + residual_h.neurons.size_out, 
+            #     dimensions=10,
+            #     neuron_type=self.neuron_type
+            # )
+            # nengo.Connection(pre=residual_v.neurons, post=concatenence_ens.neurons[:residual_v.neurons.size_out], synapse=0.001)
+            # nengo.Connection(pre=residual_h.neurons, post=concatenence_ens.neurons[residual_v.neurons.size_out:], synapse=0.001)
             # Dense layers for final predictions
-            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(concatenence_ens)
-            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(concatenence_ens)
+            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_h)
+            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_v)
             
             # concatenence_ens = nengo.Ensemble(
             #     n_neurons=np.prod(conv1_transform_v.output_shape.shape), 
