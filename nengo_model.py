@@ -143,18 +143,18 @@ class TestNet:
                 kernel_size=(3, 3),
                 padding="same"
             )
-            conv4_transform_h = nengo.Convolution(
-                n_filters=128,
-                input_shape=conv3_transform_h.output_shape.shape,
-                kernel_size=(3, 3),
-                padding="same"
-            )
-            conv5_transform_h = nengo.Convolution(
-                n_filters=128,
-                input_shape=conv4_transform_h.output_shape.shape,
-                kernel_size=(3, 3),
-                padding="same"
-            )
+            # conv4_transform_h = nengo.Convolution(
+            #     n_filters=128,
+            #     input_shape=conv3_transform_h.output_shape.shape,
+            #     kernel_size=(3, 3),
+            #     padding="same"
+            # )
+            # conv5_transform_h = nengo.Convolution(
+            #     n_filters=128,
+            #     input_shape=conv4_transform_h.output_shape.shape,
+            #     kernel_size=(3, 3),
+            #     padding="same"
+            # )
             # Vertical convolutional layers with (5, 1) kernel
             conv1_transform_v = nengo.Convolution(
                 n_filters=128,
