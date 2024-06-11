@@ -232,8 +232,8 @@ class TestNet:
                 dimensions=10,
                 neuron_type=self.neuron_type
             )
-            nengo.Connection(pre=residual_v, post=concatenence_ens.neurons[:residual_v.neurons.size_out], synapse=0.001)
-            nengo.Connection(pre=residual_h, post=concatenence_ens.neurons[residual_v.neurons.size_out:], synapse=0.001)
+            nengo.Connection(pre=residual_v.neurons, post=concatenence_ens.neurons[:residual_v.neurons.size_out], synapse=0.001)
+            nengo.Connection(pre=residual_h.neurons, post=concatenence_ens.neurons[residual_v.neurons.size_out:], synapse=0.001)
             # Dense layers for final predictions
             ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(concatenence_ens)
             ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_v)
