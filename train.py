@@ -11,9 +11,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from torch.utils.data import DataLoader
 from utils.training_utils import train_nengo_epoch, train_epoch, validate_epoch, top_k_checkpoints
 from utils.metrics import weighted_MSELoss
-from dataset import ThreeETplus_EyetrackingDataset,ThreeETplus_Eyetracking,  ScaleLabel, NormalizeLabel, \
+from dataset import ThreeETplus_EyetrackingDataset, ThreeETplus_Eyetracking,  ScaleLabel, NormalizeLabel, \
     TemporalSubsample, NormalizeLabel, SliceLongEventsToShort, \
-    EventSlicesToVoxelGrid, SliceByTimeEventsTargets
+    EventSlicesToVoxelGrid, SliceByTimeEventsTargets, EventSlicesToMap
 import tonic.transforms as transforms
 from tonic import SlicedDataset, DiskCachedDataset
 from nengo_model import SpikingNet, TestNet, LMU, LMUConv
@@ -168,9 +168,15 @@ if __name__ == "__main__":
         TemporalSubsample(temp_subsample_factor),
         NormalizeLabel(pseudo_width=640*factor, pseudo_height=480*factor)
     ])
+    # post_slicer_transform = transforms.Compose([
+    #     SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),
+    #     EventSlicesToVoxelGrid(sensor_size=(int(640*factor), int(480*factor), 2), n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization)
+    # ])
     post_slicer_transform = transforms.Compose([
         SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),
-        EventSlicesToVoxelGrid(sensor_size=(int(640*factor), int(480*factor), 2), n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization)
+        EventSlicesToMap(sensor_size=(int(640*factor), int(480*factor), 2), \
+                                n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization,
+                                map_type=args.map_type)
     ])
     slicing_time_window = args.train_length * int(10000/temp_subsample_factor)  # microseconds
     train_stride_time = int(10000 / temp_subsample_factor * args.train_stride)  # microseconds

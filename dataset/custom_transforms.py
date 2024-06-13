@@ -5,7 +5,7 @@ from tonic.slicers import (
 )
 from tonic.functional import to_voxel_grid_numpy
 from typing import Any, List, Tuple
-
+import tonic.functional as tof
 class SliceByTimeEventsTargets:
     """
     Modified from tonic.slicers.SliceByTimeEventsTargets in the Tonic Library
@@ -263,3 +263,48 @@ class NormalizeLabel:
         labels[:, 1] = labels[:, 1] / self.pseudo_height
         return labels
 
+class EventSlicesToMap:
+    def __init__(self, sensor_size, n_time_bins, per_channel_normalize, map_type='voxel'):
+        """
+        Initialize the transformation.
+
+        Args:
+        - sensor_size (tuple): The size of the sensor.
+        - n_time_bins (int): The number of time bins.
+        """
+        self.sensor_size = sensor_size
+        self.n_time_bins = n_time_bins
+        self.per_channel_normalize = per_channel_normalize
+        self.map_type = map_type
+
+    def __call__(self, event_slices):
+        """
+        Apply the transformation to the given event slices.
+
+        Args:
+        - event_slices (Tensor): The input event slices.
+
+        Returns:
+        - Tensor: A batched tensor of voxel grids.
+        """
+        ev_maps = []
+        for event_slice in event_slices:
+            if self.map_type == 'voxel':
+                ev_map = tof.to_voxel_grid_numpy(event_slice, self.sensor_size, self.n_time_bins)
+            elif self.map_type == 'binary':
+                ev_map = tof.to_frame_numpy(event_slice, self.sensor_size, n_time_bins=self.n_time_bins)
+                ev_map = tof.to_bina_rep_numpy(ev_map, n_frames=1, n_bits=self.n_time_bins)
+            elif self.map_type == 'frame':
+                ev_map = tof.to_frame_numpy(event_slice, self.sensor_size, n_time_bins=self.n_time_bins)
+            
+            ev_map = ev_map.reshape(-1, ev_map.shape[-2], ev_map.shape[-1])
+            if self.per_channel_normalize:
+                # Calculate mean and standard deviation only at non-zero values
+                non_zero_entries = (ev_map != 0)
+                for c in range(ev_map.shape[0]):
+                    mean_c = ev_map[c][non_zero_entries[c]].mean()
+                    std_c = ev_map[c][non_zero_entries[c]].std()
+
+                    ev_map[c][non_zero_entries[c]] = (ev_map[c][non_zero_entries[c]] - mean_c) / (std_c + 1e-10)
+            ev_maps.append(ev_map)
+        return np.array(ev_maps).astype(np.float32)
