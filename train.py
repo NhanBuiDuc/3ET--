@@ -4,7 +4,7 @@ import os
 
 from sklearn.model_selection import train_test_split
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     with open(os.path.join('./configs', config_file), 'r') as f:
         config = json.load(f)
     args = argparse.Namespace(**config)
-    device = "/gpu:0"
+    device = "/gpu:2"
     lr = args.lr
     # Define your model, optimizer, and criterion
     # model, inp, out_p, out_p_filt = TestNet().build_model()
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     ])
     post_slicer_transform = transforms.Compose([
         SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),
-        # EventSlicesToVoxelGrid(sensor_size=(int(640*factor), int(480*factor), 2), n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization)
+        EventSlicesToVoxelGrid(sensor_size=(int(640*factor), int(480*factor), 2), n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization)
     ])
     # post_slicer_transform = transforms.Compose([
     #     SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),

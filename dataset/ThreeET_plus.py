@@ -7,7 +7,7 @@ import tensorflow as tf
 from tonic.dataset import Dataset
 import tonic.transforms as transforms
 from sklearn.model_selection import train_test_split
-
+import jax.numpy as jnp
 class ThreeETplus_Eyetracking(Dataset):
     """3ET DVS eye tracking `3ET <https://github.com/qinche106/cb-convlstm-eyetracking>`_
     ::
@@ -232,7 +232,7 @@ class ThreeETplus_EyetrackingDataset:
         return train_x, train_y, val_x, val_y, test_x, test_y
     
 
-class ThreeETplus_EyetrackingDataset:
+class ThreeETplus_EyetrackingNumpyDataset:
     """
     Raw Eyetracking Dataset
 
@@ -294,29 +294,19 @@ class ThreeETplus_EyetrackingDataset:
                 if self.post_slicer_transform is not None:
                     sliced_events = [self.post_slicer_transform(ev) for ev in sliced_events]
                     # sliced_targets = [self.post_slicer_transform(tg) for tg in sliced_targets]
+                # sliced_events =  sliced_events.reshape(sliced_events, (sliced_events.shape[0], sliced_events.shape[1] * sliced_events.shape[2], -1))
+    
                 all_inputs.extend(sliced_events)
                 all_targets.extend(sliced_targets)
             else:
                 all_inputs.append(events)
                 all_targets.append(target)
+
+        # Convert lists to numpy arrays
+        all_inputs = jnp.array(all_inputs, dtype=jnp.float16)
+        all_targets = jnp.array(all_targets, dtype=jnp.float16)
+        all_targets = all_targets[:, :, :2]
         train_x, val_x, train_y, val_y = train_test_split(all_inputs, all_targets, test_size=0.3, random_state=42)
         val_x, test_x, val_y, test_y = train_test_split(val_x, val_y, test_size=0.3, random_state=42)
-            # print(events.shape)
-            # print(target.shape)
-        # Convert to TensorFlow tensors and reshape if necessary, specifying device
-        with tf.device(self.device):  # Specify the desired device here
-            train_x =  tf.constant(train_x)
-            # train_x = tf.reshape(train_x, [train_x.shape[0] , train_x.shape[1] * train_x.shape[2], -1])
 
-            val_x =  tf.constant(val_x)
-            # val_x = tf.reshape(val_x, [val_x.shape[0] , val_x.shape[1] * val_x.shape[2], -1])
-
-            train_y =  tf.constant(train_y)
-
-            val_y =  tf.constant(val_y)
-
-            test_x =  tf.constant(test_x)
-            # test_x = tf.reshape(test_x, [test_x.shape[0] , test_x.shape[1] * test_x.shape[2], -1])
-
-            test_y =  tf.constant(test_y)
         return train_x, train_y, val_x, val_y, test_x, test_y

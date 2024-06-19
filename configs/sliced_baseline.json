@@ -7,7 +7,7 @@
     "architecture": "CNN_GRU",
     "lr": 0.0001,
     "num_epochs": 200,
-    "batch_size": 1,
+    "batch_size": 16,
     "spatial_factor": 0.125,
     "temporal_subsample_factor": 0.2,
     "val_interval": 2,
@@ -19,7 +19,7 @@
     "val_stride": 30,
     "train_length": 30,
     "val_length": 30,
-    "n_time_bins": 4,
+    "n_time_bins": 1,
     "voxel_grid_ch_normaization": false,
     "loss": "weighted_mse",
     "map_type": "binary"
