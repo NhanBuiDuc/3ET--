@@ -98,10 +98,11 @@ def attention(x):
     return output
 
 class TestNet:
-    def __init__(self, lr=0.0001):
+    def __init__(self, batch_size, lr=0.0001):
         self.neuron_type = nengo.LIF(amplitude=0.001)
         self.input_shape = (1, 60, 80)
         self.lr = lr
+        self.batch_size = batch_size
     def build_model(self):
         with nengo.Network() as model:
             def sigmoid(x):
@@ -257,29 +258,100 @@ class TestNet:
             # nengo.Connection(conv3_feat_v.neurons, conv4_feat_v.neurons, transform=conv4_transform_v, synapse=None)
             # nengo.Connection(conv4_feat_v.neurons, conv5_feat_v.neurons, transform=conv5_transform_v, synapse=None)
             #######################
-            residual_h = nengo.Ensemble(
+            residual_h_1 = nengo.Ensemble(
                 n_neurons=np.prod(conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out + conv3_feat_h.neurons.size_out), 
                 dimensions=1,
                 neuron_type=self.neuron_type,
             )
-            residual_v = nengo.Ensemble(
+            residual_v_1 = nengo.Ensemble(
                 n_neurons=np.prod(conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out + conv3_feat_v.neurons.size_out), 
                 dimensions=1,
                 neuron_type=self.neuron_type,
             )
 
-            nengo.Connection(conv1_feat_h.neurons, residual_h.neurons[0:conv1_feat_h.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
-            nengo.Connection(conv2_feat_h.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out:conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out],  transform=nengo.dists.Uniform(low=-1, high=1))
-            nengo.Connection(conv3_feat_h.neurons, residual_h.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out :], transform=nengo.dists.Uniform(low=-1, high=1))
+            nengo.Connection(conv1_feat_h.neurons, residual_h_1.neurons[0:conv1_feat_h.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
+            nengo.Connection(conv2_feat_h.neurons, residual_h_1.neurons[conv1_feat_h.neurons.size_out:conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out],  transform=nengo.dists.Uniform(low=-1, high=1))
+            nengo.Connection(conv3_feat_h.neurons, residual_h_1.neurons[conv1_feat_h.neurons.size_out + conv2_feat_h.neurons.size_out :], transform=nengo.dists.Uniform(low=-1, high=1))
+
+            nengo.Connection(conv1_feat_v.neurons, residual_v_1.neurons[0:conv1_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
+            nengo.Connection(conv2_feat_v.neurons, residual_v_1.neurons[conv1_feat_v.neurons.size_out:conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
+            nengo.Connection(conv3_feat_v.neurons, residual_v_1.neurons[conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out:],  transform=nengo.dists.Uniform(low=-1, high=1))
 
 
-            nengo.Connection(conv1_feat_v.neurons, residual_v.neurons[0:conv1_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
-            nengo.Connection(conv2_feat_v.neurons, residual_v.neurons[conv1_feat_v.neurons.size_out:conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
-            nengo.Connection(conv3_feat_v.neurons, residual_v.neurons[conv1_feat_v.neurons.size_out + conv2_feat_v.neurons.size_out:],  transform=nengo.dists.Uniform(low=-1, high=1))
+            # conv1_residual_h_1 = nengo.Convolution(
+            #     n_filters=32,
+            #     input_shape=tuple(residual_h_1.neurons.size_out),
+            #     kernel_size=(3),
+            #     padding="same"
+            # )
+            # conv2_residual_h_1 = nengo.Convolution(
+            #     n_filters=32,
+            #     input_shape=tuple(conv1_residual_h_1.output_shape.shape),
+            #     kernel_size=(3),
+            #     padding="same"
+            # )
+            # conv3_residual_h_1 = nengo.Convolution(
+            #     n_filters=32,
+            #     input_shape=tuple(conv2_residual_h_1.output_shape.shape),
+            #     kernel_size=(3),
+            #     padding="same"
+            # )
 
+            residual_conv1_feat_h = nengo.Ensemble(
+                n_neurons=np.prod(residual_h_1.neurons.size_out), 
+                dimensions=1,
+                neuron_type=self.neuron_type,
+            )
+            # residual_conv2_feat_h = nengo.Ensemble(
+            #     n_neurons=np.prod(residual_h_1.neurons.size_out), 
+            #     dimensions=1,
+            #     neuron_type=self.neuron_type,
+            # )
+            # residual_conv3_feat_h = nengo.Ensemble(
+            #     n_neurons=np.prod(residual_h_1.neurons.size_out), 
+            #     dimensions=1,
+            #     neuron_type=self.neuron_type,
+            # )
+            # residual_h_2 = nengo.Ensemble(
+            #     n_neurons=np.prod(residual_conv1_feat_h.neurons.size_out + residual_conv2_feat_h.neurons.size_out + residual_conv3_feat_h.neurons.size_out), 
+            #     dimensions=1,
+            #     neuron_type=self.neuron_type,
+            # )
+            
+            # nengo.Connection(residual_h_1.neurons, residual_conv1_feat_h.neurons, transform = nengo.dists.Uniform(low=-1, high=1), synapse=0.001)
+            # nengo.Connection(residual_h_1.neurons, residual_conv2_feat_h.neurons, transform = nengo.dists.Uniform(low=-1, high=1), synapse=0.001)
+            # nengo.Connection(residual_h_1.neurons, residual_conv3_feat_h.neurons, transform = nengo.dists.Uniform(low=-1, high=1), synapse=0.001)
 
-            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_h)
-            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_v)
+            # nengo.Connection(residual_conv1_feat_h.neurons, residual_h_2.neurons[0:residual_conv1_feat_h.neurons.size_out], transform=nengo.dists.Uniform(low=-1, high=1))
+            # nengo.Connection(residual_conv2_feat_h.neurons, residual_h_2.neurons[residual_conv1_feat_h.neurons.size_out:residual_conv1_feat_h.neurons.size_out + residual_conv2_feat_h.neurons.size_out],  transform=nengo.dists.Uniform(low=-1, high=1))
+            # nengo.Connection(residual_conv3_feat_h.neurons, residual_h_2.neurons[residual_conv1_feat_h.neurons.size_out + residual_conv2_feat_h.neurons.size_out :], transform=nengo.dists.Uniform(low=-1, high=1))
+            residual_h_2 = nengo.Ensemble(
+                n_neurons=np.prod(residual_h_1.neurons.size_out), 
+                dimensions=1,
+                neuron_type=self.neuron_type,
+            )
+            residual_h_3 = nengo.Ensemble(
+                n_neurons=np.prod(residual_h_1.neurons.size_out), 
+                dimensions=1,
+                neuron_type=self.neuron_type,
+            )
+            residual_h_4 = nengo.Ensemble(
+                n_neurons=np.prod(residual_h_1.neurons.size_out), 
+                dimensions=1,
+                neuron_type=self.neuron_type,
+            )
+            # residual_h_2 = nengo.Ensemble(
+            #     n_neurons=np.prod(residual_conv1_feat_h.neurons.size_out + residual_conv2_feat_h.neurons.size_out + residual_conv3_feat_h.neurons.size_out), 
+            #     dimensions=1,
+            #     neuron_type=self.neuron_type,
+            # )
+            
+            nengo.Connection(residual_h_1.neurons, residual_h_2.neurons, transform = nengo.dists.Uniform(low=-1, high=1), synapse=0.001)
+            nengo.Connection(residual_h_2.neurons, residual_h_3.neurons, transform = nengo.dists.Uniform(low=-1, high=1), synapse=0.001)
+            nengo.Connection(residual_h_3.neurons, residual_h_4.neurons, transform = nengo.dists.Uniform(low=-1, high=1), synapse=0.001)
+
+            ens_x = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_h_4)
+            ens_y = nengo_dl.Layer(tf.keras.layers.Dense(units=1, activation=tf.nn.sigmoid))(residual_v_1)
             
 
             p_x = nengo.Probe(ens_x, label="p_x")

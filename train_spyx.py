@@ -4,14 +4,14 @@ import os
 
 from sklearn.model_selection import train_test_split
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1, 3"
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
 from torch.utils.data import DataLoader
 from utils.training_utils import train_nengo_epoch, train_epoch, validate_epoch, top_k_checkpoints
 from utils.metrics import weighted_MSELoss
-from dataset import ThreeETplus_EyetrackingNumpyDataset, ThreeETplus_EyetrackingDataset, ThreeETplus_Eyetracking,  ScaleLabel, NormalizeLabel, \
+from dataset import ThreeETplus_EyetrackingNumpyDataset, ThreeETplus_EyetrackingJaxNumpyDataset, ThreeETplus_Eyetracking,  ScaleLabel, NormalizeLabel, \
     TemporalSubsample, NormalizeLabel, SliceLongEventsToShort, \
     EventSlicesToVoxelGrid, SliceByTimeEventsTargets, EventSlicesToMap
 import tonic.transforms as transforms
@@ -35,17 +35,23 @@ from tqdm import tqdm
 
 # implement our SNN in DeepMind's Haiku
 import haiku as hk
-from spyx_utils import shd_snn, gd, test_gd
+from spyx_utils import shd_snn, gd, test_gd, full_gd
 from model.spiking_jax import forward
 # for surrogate loss training.
 import optax
-from dataloader import DataLoader
+from dataloader import DataLoader, SplitDataLoader
+
+def print_jax(x):
+    jax.debug.print("{x}", x=x)
+    return x
+
+
 if __name__ == "__main__":
     config_file = 'sliced_baseline.json'
     with open(os.path.join('./configs', config_file), 'r') as f:
         config = json.load(f)
     args = argparse.Namespace(**config)
-    device = "/gpu:2"
+    device = "/gpu"
     policy = jmp.get_policy('half')
 
 
@@ -85,7 +91,16 @@ if __name__ == "__main__":
         seq_stride=args.val_stride, 
         include_incomplete=False
     )
-    train_data_orig = ThreeETplus_EyetrackingNumpyDataset(data_dir=args.data_dir, split="train", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=train_slicer, post_slicer_transform = post_slicer_transform, device = device)
+    train_data_orig = ThreeETplus_EyetrackingJaxNumpyDataset(
+        data_dir=args.data_dir, 
+        split="train", 
+        transform=transforms.Downsample(spatial_factor=factor), 
+        target_transform=label_transform, 
+        slicer=train_slicer, 
+        post_slicer_transform = post_slicer_transform, 
+        device = device,
+        cache = True,
+        cache_dir = "./cache")
     # val_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="test", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=val_slicer, post_slicer_transform = post_slicer_transform)
     
     train_x = train_data_orig.train_x
@@ -102,8 +117,29 @@ if __name__ == "__main__":
     # Since there's nothing stochastic about the network, we can avoid using an RNG as a param!
     SNN = hk.without_apply_rng(hk.transform(forward))
     params = SNN.init(rng=key, x=train_x[0])
-    dl = DataLoader(train_x, train_y, val_x, val_y, test_x, test_y, batch_size=64)
-    grad_params, metrics = gd(SNN, params, dl, epochs=1000) # this takes a minute or two to compile on Colab because of weak CPU compute.
+    split = False
+    if split:
+        dl = SplitDataLoader(train_x, train_y, val_x, val_y, test_x, test_y, batch_size=64)
+        grad_params, metrics = gd(SNN, params, dl, epochs=300) # this takes a minute or two to compile on Colab because of weak CPU compute.
+        print("grad_params")
+        print_jax(grad_params)
+        print("metrics")
+        print_jax(metrics)
+        mse, r2_score, preds, tgts = test_gd(SNN, grad_params, dl)
+        print("mse: ")
+        print_jax(mse)
+        print("pred: ")
+        print_jax(preds)
+        print("targets: ")
+        print_jax(tgts)
+    else:
+        # Concatenate the arrays to form full_x and full_y
+        full_x = jnp.concatenate([train_x, val_x, test_x], axis=0)
+        full_y = jnp.concatenate([train_y, val_y, test_y], axis=0)
+        dl = DataLoader(full_x, full_y, batch_size = 64)
+        grad_params, metrics = full_gd(SNN, params, dl, epochs=50) # this takes a minute or two to compile on Colab because of weak CPU compute.
+        print("grad_params")
+        print_jax(grad_params)
 
-    mse, r2_score, preds, tgts = test_gd(SNN, grad_params, dl)
-    print(f"Performance: mse={mse}, r2_score={r2_score}, preds={preds}, tgts={tgts}")
+        print("train loss")
+        print_jax(metrics)

@@ -214,7 +214,7 @@ class ThreeETplus_EyetrackingDataset:
             # print(events.shape)
             # print(target.shape)
         # Convert to TensorFlow tensors and reshape if necessary, specifying device
-        with tf.device(self.device):  # Specify the desired device here
+        with tf.device("/gpu:2"):  # Specify the desired device here
             train_x =  tf.constant(train_x)
             train_x = tf.reshape(train_x, [train_x.shape[0] , train_x.shape[1] * train_x.shape[2], -1])
 
@@ -303,6 +303,126 @@ class ThreeETplus_EyetrackingNumpyDataset:
                 all_targets.append(target)
 
         # Convert lists to numpy arrays
+        all_inputs = jnp.array(all_inputs, dtype=jnp.float16)
+        all_targets = jnp.array(all_targets, dtype=jnp.float16)
+        all_targets = all_targets[:, :, :2]
+        train_x, val_x, train_y, val_y = train_test_split(all_inputs, all_targets, test_size=0.3, random_state=42)
+        val_x, test_x, val_y, test_y = train_test_split(val_x, val_y, test_size=0.3, random_state=42)
+
+        return train_x, train_y, val_x, val_y, test_x, test_y
+
+
+import os
+import h5py
+import numpy as np
+import jax.numpy as jnp
+from sklearn.model_selection import train_test_split
+from typing import Optional, Callable
+
+class ThreeETplus_EyetrackingJaxNumpyDataset:
+    """
+    Raw Eyetracking Dataset
+
+    Parameters:
+        data_dir (str): Directory containing data files.
+        split (str): Dataset split ('train', 'val', 'test').
+        transform (callable, optional): A callable of transforms to apply to the data.
+        target_transform (callable, optional): A callable of transforms to apply to the targets/labels.
+        slicer (callable, optional): A callable to slice data.
+        post_slicer_transform (callable, optional): A callable to transform data post slicing.
+        device (str): Device to load data on.
+        cache (bool): Whether to use cached data or not.
+        cache_dir (str): Directory to store cache files.
+    """
+
+    def __init__(
+        self,
+        data_dir: str,
+        split: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        slicer: Optional[Callable] = None,
+        post_slicer_transform: Optional[Callable] = None,
+        device: str = "cuda",
+        cache: bool = False,
+        cache_dir: str = "./cache"
+    ):
+        self.data_dir = data_dir
+        self.split = split
+        self.transform = transform
+        self.target_transform = target_transform
+        self.slicer = slicer
+        self.post_slicer_transform = post_slicer_transform
+        self.device = device
+        self.cache = cache
+        self.cache_dir = cache_dir
+        self.data_files = os.listdir(os.path.join(data_dir, split))
+        
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+
+        self.cache_file = os.path.join(cache_dir, f"{split}_data.h5")
+
+        if self.cache and os.path.exists(self.cache_file):
+            self.train_x, self.train_y, self.val_x, self.val_y, self.test_x, self.test_y = self.load_from_cache()
+        else:
+            self.train_x, self.train_y, self.val_x, self.val_y, self.test_x, self.test_y = self.load_data()
+            if self.cache:
+                self.save_to_cache()
+
+    def __len__(self):
+        return len(self.data_files)
+
+    def load_from_cache(self):
+        with h5py.File(self.cache_file, "r") as f:
+            train_x = jnp.array(f["train_x"][:], dtype=jnp.float16)
+            train_y = jnp.array(f["train_y"][:], dtype=jnp.float16)
+            val_x = jnp.array(f["val_x"][:], dtype=jnp.float16)
+            val_y = jnp.array(f["val_y"][:], dtype=jnp.float16)
+            test_x = jnp.array(f["test_x"][:], dtype=jnp.float16)
+            test_y = jnp.array(f["test_y"][:], dtype=jnp.float16)
+        return train_x, train_y, val_x, val_y, test_x, test_y
+
+    def save_to_cache(self):
+        with h5py.File(self.cache_file, "w") as f:
+            f.create_dataset("train_x", data=np.array(self.train_x, dtype=np.float16))
+            f.create_dataset("train_y", data=np.array(self.train_y, dtype=np.float16))
+            f.create_dataset("val_x", data=np.array(self.val_x, dtype=np.float16))
+            f.create_dataset("val_y", data=np.array(self.val_y, dtype=np.float16))
+            f.create_dataset("test_x", data=np.array(self.test_x, dtype=np.float16))
+            f.create_dataset("test_y", data=np.array(self.test_y, dtype=np.float16))
+
+    def load_data(self):
+        all_inputs = []
+        all_targets = []
+        for index, dir in enumerate(self.data_files):
+            data_file_path = os.path.join(os.path.join(self.data_dir, self.split, dir), dir + ".h5")
+            if self.split == "test":
+                label_file_path = os.path.join(os.path.join(self.data_dir, self.split, dir), "label_zeros.txt")               
+            else:
+                label_file_path = os.path.join(os.path.join(self.data_dir, self.split, dir), "label.txt")
+
+            with h5py.File(data_file_path, "r") as f:
+                events = f["events"][:].astype(np.dtype([("t", int), ("x", int), ("y", int), ("p", int)]))
+                events['p'] = events['p'] * 2 - 1  # convert polarity to -1 and 1
+
+            with open(label_file_path, "r") as f:
+                target = np.array(
+                    [list(map(float, line.strip('()\n').split(', '))) for line in f.readlines()], dtype=np.float32)
+            if self.transform is not None:
+                events = self.transform(events)
+            if self.target_transform is not None:
+                target = self.target_transform(target)
+            if self.slicer is not None:
+                sliced_events, sliced_targets = self.slicer.slice(events, target)
+                if self.post_slicer_transform is not None:
+                    sliced_events = [self.post_slicer_transform(ev) for ev in sliced_events]
+                all_inputs.extend(sliced_events)
+                all_targets.extend(sliced_targets)
+            else:
+                all_inputs.append(events)
+                all_targets.append(target)
+
         all_inputs = jnp.array(all_inputs, dtype=jnp.float16)
         all_targets = jnp.array(all_targets, dtype=jnp.float16)
         all_targets = all_targets[:, :, :2]

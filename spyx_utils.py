@@ -12,6 +12,10 @@ from jax import numpy as jnp
 import jmp # jax mixed-precision
 import numpy as np
 
+
+def jprint(x):
+    jax.debug.print("{x}", x=x)
+    return x
 def mse_spikerate(sparsity=0.25, smoothing=0.0, time_axis=1):
     """Calculate the mean squared error of the mean spike rate. Allows for label smoothing to discourage silencing the other neurons in the readout layer.
 
@@ -44,20 +48,21 @@ def euclidean_distance_loss(axis = 1):
         return jnp.mean(distances)
     return jax.jit(_euclidean_distance_loss)
 
-# def mse_spikerate(sparsity=0.25, smoothing=0.0):
-#     """Calculate the mean squared error of the mean spike rate. Allows for label smoothing to discourage silencing the other neurons in the readout layer.
+def mean_absolute_error(axis=1):
+    """Calculate the mean absolute error between predictions and targets.
 
-#     :param sparsity: the percentage of the time you want the neurons to spike
-#     :param smoothing: [optional] rate at which to smooth labels.
-#     :return: Mean-Squared-Error loss function on the spike rate that takes SNN output traces and integer index labels.
-#     """
-#     def _mse_spikerate(traces, targets):
-#         # Here we assume traces is already of shape (batch_size, num_classes)
-#         logits = traces
-#         # One-hot encode targets and apply smoothing
-#         labels = optax.smooth_labels(jax.nn.one_hot(targets, logits.shape[-1]), smoothing)
-#         # Scale labels with sparsity and number of time steps
-#         return jnp.mean(optax.squared_error(logits, labels * sparsity * traces.shape[0]))
+    :param predictions: Predicted values from the model, shape (batch_size, ...).
+    :param targets: Actual target values, shape (batch_size, ...).
+    :return: Mean absolute error.
+    """
+
+    def _mean_absolute_error(predictions, targets):
+        # Calculate the absolute error for each prediction-target pair
+        absolute_errors = jnp.abs(predictions - targets)
+        # Return the mean of these errors
+        return jnp.mean(absolute_errors, axis=axis)
+    
+    return jax.jit(_mean_absolute_error)
 
     return jax.jit(_mse_spikerate)
 
@@ -87,7 +92,7 @@ def shd_snn(x):
     ])
 
     # This takes our SNN core and computes it across the input data.
-    spikes, V = hk.dynamic_unroll(core, x, core.initial_state(x.shape[0]), time_major=False, unroll=32) # unroll our model.
+    spikes, V = hk.dynamic_unroll(core, x, core.initial_state(x.shape[0]), time_major=True, unroll=32) # unroll our model.
     # # Combine the time dimension to match the target shape (e.g., using mean)
 
     return spikes, V
@@ -98,7 +103,7 @@ def gd(SNN, params, dl, epochs=300, schedule=3e-4):
     opt = optax.lion(learning_rate=schedule)
 
     # Loss = spyx.fn.integral_crossentropy()
-    Loss = euclidean_distance_loss(axis=1)
+    Loss = mean_absolute_error(axis=1)
     # Acc = spyx.fn.integral_accuracy()
 
     # create and initialize the optimizer
@@ -108,6 +113,8 @@ def gd(SNN, params, dl, epochs=300, schedule=3e-4):
     # define and compile our eval function that computes the loss for our SNN
     @jax.jit
     def net_eval(weights, events, targets):
+        # print(events)
+        # print(targets)
         readout = SNN.apply(weights, events)
         traces, V_f = readout
         # spikes = jnp.mean(spikes, axis=1)
@@ -126,6 +133,8 @@ def gd(SNN, params, dl, epochs=300, schedule=3e-4):
         grad_params, opt_state = state
         # unpack the data into x, y
         events, targets = data
+        # print(events)
+        # print(targets)
         # events = jnp.unpackbits(events, axis=1) # decompress temporal axis
         # compute loss and gradient
         loss, grads = surrogate_grad(grad_params, events, targets)
@@ -265,3 +274,99 @@ def test_gd(SNN, params, dl):
     tgts = jnp.concatenate(test_metrics[3], axis=0)
 
     return mse, r2_score, preds, tgts
+
+def save_checkpoint(params, path="./checkpoints/best_model.npy"):
+    concrete_params = jax.device_get(params)
+    jnp.save(path, concrete_params, allow_pickle=True)
+    
+def full_gd(SNN, params, dl, epochs=300, schedule=1e-6):
+
+    # We use optax for our optimizer.
+    # opt = optax.lion(learning_rate=schedule)
+    opt = optax.chain(
+        optax.centralize(),
+        optax.lion(learning_rate=schedule),
+    )
+    # Loss = spyx.fn.integral_crossentropy()
+    Loss = euclidean_distance_loss(axis=1)
+    # Acc = spyx.fn.integral_accuracy()
+
+    # create and initialize the optimizer
+    opt_state = opt.init(params)
+    grad_params = params
+
+    # Initialize best loss as infinity
+    best_loss = jnp.inf
+    # define and compile our eval function that computes the loss for our SNN
+    @jax.jit
+    def net_eval(weights, events, targets):
+        # print(events)
+        # print(targets)
+        readout = SNN.apply(weights, events)
+        traces, V_f = readout
+        # spikes = jnp.mean(spikes, axis=1)
+        traces = np.reshape(traces, (traces.shape[0], -1))
+        return Loss(traces, targets)
+
+    # Use JAX to create a function that calculates the loss and the gradient!
+    surrogate_grad = jax.value_and_grad(net_eval)
+
+    rng = jax.random.PRNGKey(0)
+
+    # compile the meat of our training loop for speed
+    @jax.jit
+    def train_step(state, data):
+        # unpack the parameters and optimizer state
+        grad_params, opt_state = state
+        # unpack the data into x, y
+        events, targets = data
+
+        loss, grads = surrogate_grad(grad_params, events, targets)
+        print("Loss: ")
+        jprint(loss)
+        # jprint(grads)
+        # generate updates based on the gradients and optimizer
+        updates, opt_state = opt.update(grads, opt_state, grad_params)
+        # return the updated parameters
+        new_state = [optax.apply_updates(grad_params, updates), opt_state]
+        return new_state, loss
+
+
+    # Ensure checkpoints directory exists
+    os.makedirs("./checkpoints", exist_ok=True)
+    # Here's the start of our training loop!
+    @scan_tqdm(epochs)
+    def epoch(epoch_state, epoch_num):
+        curr_params, curr_opt_state = epoch_state
+
+        shuffle_rng = jax.random.fold_in(rng, epoch_num)
+        train_data = dl.train_epoch(shuffle_rng)
+
+        # train epoch
+        end_state, train_loss = jax.lax.scan(
+            train_step,# our function which computes and updates gradients for one batch
+            [curr_params, curr_opt_state], # initialize with parameters and optimizer state of current epoch
+            train_data,# pass the newly shuffled training data
+            train_data.obs.shape[0]# this corresponds to the number of training batches
+        )
+
+        new_params, _ = end_state
+        # Update best loss and save model if current loss is better
+        # save_checkpoint(new_params)
+
+        return end_state, train_loss
+    # end epoch
+
+    # epoch loop
+    final_state, metrics = jax.lax.scan(
+        epoch,
+        [grad_params, opt_state], # metric arrays
+        jnp.arange(epochs), #
+        epochs # len of loop
+    )
+
+    final_params, final_optimizer_state = final_state
+
+
+    # return our final, optimized network.
+    return final_params, metrics

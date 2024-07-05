@@ -4,7 +4,7 @@ import os
 
 from sklearn.model_selection import train_test_split
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 2, 4, 6"
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -150,171 +150,147 @@ if __name__ == "__main__":
     with open(os.path.join('./configs', config_file), 'r') as f:
         config = json.load(f)
     args = argparse.Namespace(**config)
-    device = "/gpu:2"
-    lr = args.lr
-    # Define your model, optimizer, and criterion
-    # model, inp, out_p, out_p_filt = TestNet().build_model()
-    # model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet(lr=lr).build_model()
-    model, inp, p_x, p_y, p_x_filt, p_y_filt = TestNet(lr=lr).build_model()
-    minibatch_size = 3
-    sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
+    # Configure TensorFlow for multi-GPU support
+    strategy = tf.distribute.MirroredStrategy()
+    print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+    device = "/gpu"
+    # gpus = tf.config.experimental.list_physical_devices('GPU')
+    # for gpu in gpus:
+    #     tf.config.experimental.set_memory_growth(gpu, True)
+    # Open a strategy scope.
+    if True:
+        lr = args.lr
+        # Define your model, optimizer, and criterion
+        # model, inp, out_p, out_p_filt = TestNet().build_model()
+        # model, inp, p_x, p_y, p_b, p_x_filt, p_y_filt, p_b_filt = TestNet(lr=lr).build_model()
+        minibatch_size = 16
+        model, inp, p_x, p_y, p_x_filt, p_y_filt = TestNet(batch_size = minibatch_size, lr=lr).build_model()
 
-    factor = args.spatial_factor  # spatial downsample factor
-    temp_subsample_factor = args.temporal_subsample_factor  # downsampling original 100Hz label to 20Hz
+        sim = nengo_dl.Simulator(model, minibatch_size=minibatch_size, device=device)
+        with strategy.scope():
+            factor = args.spatial_factor  # spatial downsample factor
+            temp_subsample_factor = args.temporal_subsample_factor  # downsampling original 100Hz label to 20Hz
 
-    # The original labels are spatially downsampled with 'factor', downsampled to 20Hz, and normalized w.r.t width and height to [0,1]
-    label_transform = transforms.Compose([
-        ScaleLabel(factor),
-        TemporalSubsample(temp_subsample_factor),
-        NormalizeLabel(pseudo_width=640*factor, pseudo_height=480*factor)
-    ])
-    post_slicer_transform = transforms.Compose([
-        SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),
-        EventSlicesToVoxelGrid(sensor_size=(int(640*factor), int(480*factor), 2), n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization)
-    ])
-    # post_slicer_transform = transforms.Compose([
-    #     SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),
-    #     EventSlicesToMap(sensor_size=(int(640*factor), int(480*factor), 2), \
-    #                             n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization,
-    #                             map_type=args.map_type)
-    # ])
-    slicing_time_window = args.train_length * int(10000/temp_subsample_factor)  # microseconds
-    train_stride_time = int(10000 / temp_subsample_factor * args.train_stride)  # microseconds
+            # The original labels are spatially downsampled with 'factor', downsampled to 20Hz, and normalized w.r.t width and height to [0,1]
+            label_transform = transforms.Compose([
+                ScaleLabel(factor),
+                TemporalSubsample(temp_subsample_factor),
+                NormalizeLabel(pseudo_width=640*factor, pseudo_height=480*factor)
+            ])
+            post_slicer_transform = transforms.Compose([
+                SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),
+                EventSlicesToVoxelGrid(sensor_size=(int(640*factor), int(480*factor), 2), n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization)
+            ])
+            # post_slicer_transform = transforms.Compose([
+            #     SliceLongEventsToShort(time_window=int(10000 / temp_subsample_factor), overlap=0, include_incomplete=True),
+            #     EventSlicesToMap(sensor_size=(int(640*factor), int(480*factor), 2), \
+            #                             n_time_bins=args.n_time_bins, per_channel_normalize=args.voxel_grid_ch_normaization,
+            #                             map_type=args.map_type)
+            # ])
+            slicing_time_window = args.train_length * int(10000/temp_subsample_factor)  # microseconds
+            train_stride_time = int(10000 / temp_subsample_factor * args.train_stride)  # microseconds
 
-    train_slicer = SliceByTimeEventsTargets(
-        slicing_time_window, 
-        overlap=slicing_time_window - train_stride_time, 
-        seq_length=args.train_length, 
-        seq_stride=args.train_stride, 
-        include_incomplete=False
-    )
-    val_slicer = SliceByTimeEventsTargets(
-        slicing_time_window, 
-        overlap=0, 
-        seq_length=args.val_length, 
-        seq_stride=args.val_stride, 
-        include_incomplete=False
-    )
-    train_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="train", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=train_slicer, post_slicer_transform = post_slicer_transform, device = device)
-    # val_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="test", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=val_slicer, post_slicer_transform = post_slicer_transform)
-    train_x = train_data_orig.train_x
-    train_y = train_data_orig.train_y
-    val_x = train_data_orig.val_x
-    val_y = train_data_orig.val_y
-    test_x = train_data_orig.test_x
-    test_y = train_data_orig.test_y
+            train_slicer = SliceByTimeEventsTargets(
+                slicing_time_window, 
+                overlap=slicing_time_window - train_stride_time, 
+                seq_length=args.train_length, 
+                seq_stride=args.train_stride, 
+                include_incomplete=False
+            )
+            val_slicer = SliceByTimeEventsTargets(
+                slicing_time_window, 
+                overlap=0, 
+                seq_length=args.val_length, 
+                seq_stride=args.val_stride, 
+                include_incomplete=False
+            )
 
-    isTrain = False
-    sim.compile(
-        optimizer=tf.optimizers.Adam(),
-        loss={
-            p_x: tf.losses.MeanSquaredError(),
-            p_y: tf.losses.MeanSquaredError(),
-            # p_b: tf.losses.MeanSquaredError(),
-        },
-        metrics={
-            # out_p: [
-            #     p1_accuracy,
-            #     p3_accuracy,
-            #     p5_accuracy,
-            #     p10_accuracy,
-            #     p15_accuracy,
-            #     tf.keras.losses.MeanAbsoluteError(),
-            #     tf.keras.losses.MeanSquaredError()
-            # ],
-            # out_p_filt: [                    
-            #     p1_accuracy,
-            #     p3_accuracy,
-            #     p5_accuracy,
-            #     p10_accuracy,
-            #     p15_accuracy,
-            #     tf.keras.losses.MeanAbsoluteError(),
-            #     tf.keras.losses.MeanSquaredError()
-            # ]
-            # out_x: [
-            #     combined_p1_accuracy,
-            #     combined_p3_accuracy,
-            #     combined_p5_accuracy,
-            #     combined_p10_accuracy,
-            #     combined_p15_accuracy,
-            #     tf.keras.losses.MeanAbsoluteError(),
-            #     tf.keras.losses.MeanSquaredError()
-            # ],
-            # p_y: [                    
-            #     combined_p1_accuracy,
-            #     combined_p3_accuracy,
-            #     combined_p5_accuracy,
-            #     combined_p10_accuracy,
-            #     combined_p15_accuracy,
-            #     tf.keras.losses.MeanAbsoluteError(),
-            #     tf.keras.losses.MeanSquaredError()
-            # ]
-        }
-    )
-with tf.device(device):
-        if isTrain:
+            train_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="train", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=train_slicer, post_slicer_transform = post_slicer_transform, device = device)
+            # val_data_orig = ThreeETplus_EyetrackingDataset(data_dir=args.data_dir, split="test", transform=transforms.Downsample(spatial_factor=factor), target_transform=label_transform, slicer=val_slicer, post_slicer_transform = post_slicer_transform)
+            train_x = train_data_orig.train_x
+            train_y = train_data_orig.train_y
+            val_x = train_data_orig.val_x
+            val_y = train_data_orig.val_y
+            test_x = train_data_orig.test_x
+            test_y = train_data_orig.test_y
+
+            isTrain = False
+            sim.compile(
+                optimizer=tf.optimizers.Adam(),
+                loss={
+                    p_x: tf.losses.MeanSquaredError(),
+                    p_y: tf.losses.MeanSquaredError(),
+                    # p_b: tf.losses.MeanSquaredError(),
+                },
+                metrics={
+                }
+            )
+        # with tf.device(device):
+        # with strategy.scope():
+        # if True:
+            if isTrain:
             
-            # sim.fit(x=train_x, y=train_y)
-            # val_loss = sim.evaluate(x=val_x, y=val_y)
-            best_val_loss = float("inf")
-            patience_counter = 0
-            for epoch in range(args.num_epochs):
-                print(f"epoch {epoch}")
-                sim.fit(
-                    # x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 1:2]})
-                    x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 0:1],
-                                        p_x_filt: train_y[:, :, 0:1], p_y_filt: train_y[:, :, 0:1]})
-                    # x={inp: train_x},  y={p_x: train_y, p_x_filt: train_y})
-                losses = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2],
-                                                           p_x_filt: val_y[:, :, 0:1], p_y_filt: val_y[:, :, 1:2]})
-                # val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y, p_x_filt: val_y})['loss']
-                val_loss = losses['loss']
-                print(f"val_loss: {losses}")
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-                    patience_counter = 0
+                # sim.fit(x=train_x, y=train_y)
+                # val_loss = sim.evaluate(x=val_x, y=val_y)
+                best_val_loss = float("inf")
+                patience_counter = 0
+                for epoch in range(args.num_epochs):
+                    print(f"epoch {epoch}")
+                    sim.fit(
+                        # x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 1:2]})
+                        x={inp: train_x},  y={p_x: train_y[:, :, 0:1], p_y: train_y[:, :, 0:1],
+                                            p_x_filt: train_y[:, :, 0:1], p_y_filt: train_y[:, :, 0:1]})
+                        # x={inp: train_x},  y={p_x: train_y, p_x_filt: train_y})
+                    losses = sim.evaluate(x={inp: val_x}, y={p_x: val_y[:, :, 0:1], p_y: val_y[:, :, 1:2],
+                                                            p_x_filt: val_y[:, :, 0:1], p_y_filt: val_y[:, :, 1:2]})
+                    # val_loss = sim.evaluate(x={inp: val_x}, y={p_x: val_y, p_x_filt: val_y})['loss']
+                    val_loss = losses['loss']
+                    print(f"val_loss: {losses}")
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        patience_counter = 0
+                        sim.save_params("./best_model")
+                    else:
+                        patience_counter += 1
+                    print(f"patient {patience_counter}")
+                    if patience_counter >= 50:
+                        print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
+                        break
+                test = sim.evaluate(x={inp: test_x}, y={p_x: test_y[:, :, 0:1], p_y: test_y[:, :, 1:2],
+                                                        p_x_filt: test_y[:, :, 0:1], p_y_filt: test_y[:, :, 1:2]})
+                # Merge train, validation, and test sets
+                combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
+                combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
+
+                # Load the best model
+                sim.load_params("./best_model")
+                # Train the best model for 50 more epochs on the combined dataset
+                for epoch in range(50):
+                    print(f"Additional training epoch {epoch}")
+
+                    sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                                                    p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
+
+                # Evaluate the final model
+                final_loss = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
+                print(f"Final loss after additional training: {final_loss}")
+            else:
+                combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
+                combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
+                best_train_loss = float("inf")
+                # Load the best model
+                # sim.load_params("./best_model")
+                for epoch in range(50):
+                    print(f"Additional training epoch {epoch}")
+                    sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                                                    p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
+                    # losses = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
+                    #                                            p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
+                    # loss = losses['loss']
+                    # if loss < best_train_loss:
+                    #     best_train_loss = loss
                     sim.save_params("./best_model")
-                else:
-                    patience_counter += 1
-                print(f"patient {patience_counter}")
-                if patience_counter >= 50:
-                    print("Early stopping due to no improvement in validation loss for 10 consecutive epochs.")
-                    break
-            test = sim.evaluate(x={inp: test_x}, y={p_x: test_y[:, :, 0:1], p_y: test_y[:, :, 1:2],
-                                                    p_x_filt: test_y[:, :, 0:1], p_y_filt: test_y[:, :, 1:2]})
-            # Merge train, validation, and test sets
-            combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
-            combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
-
-            # Load the best model
-            sim.load_params("./best_model")
-            # Train the best model for 50 more epochs on the combined dataset
-            for epoch in range(50):
-                print(f"Additional training epoch {epoch}")
-
-                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
-                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
-
-            # Evaluate the final model
-            final_loss = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
-                                                              p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
-            print(f"Final loss after additional training: {final_loss}")
-        else:
-            combined_x = np.concatenate([train_x, val_x, test_x], axis=0)
-            combined_y = np.concatenate([train_y, val_y, test_y], axis=0)
-            best_train_loss = float("inf")
-            # Load the best model
-            # sim.load_params("./best_model")
-            for epoch in range(50):
-                print(f"Additional training epoch {epoch}")
-                sim.fit(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
-                                                p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
-                # losses = sim.evaluate(x={inp: combined_x}, y={p_x: combined_y[:, :, 0:1], p_y: combined_y[:, :, 1:2],
-                #                                            p_x_filt: combined_y[:, :, 0:1], p_y_filt: combined_y[:, :, 1:2]})
-                # loss = losses['loss']
-                # if loss < best_train_loss:
-                #     best_train_loss = loss
-                sim.save_params("./best_model")
     # with tf.device(device):
     #     if isTrain:
             

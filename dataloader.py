@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 State = namedtuple("State", ["obs", "labels"])
 
-class DataLoader:
+class SplitDataLoader:
     """
     Dataloading wrapper for a custom dataset. The entire dataset is loaded to vRAM in a temporally compressed format.
 
@@ -59,7 +59,33 @@ class DataLoader:
 
         self.test_epoch = _test_epoch
 
+class DataLoader:
+    """
+    Dataloading wrapper for a custom dataset. The entire dataset is loaded to vRAM in a temporally compressed format.
 
+    :batch_size: Number of samples per batch.
+    """
+
+    def __init__(self, data, targets, batch_size=64):
+        self.batch_size = batch_size
+
+        # Convert the provided data to jax.numpy arrays
+        self.data = data
+        self.targets = targets
+        self.len = len(data)
+
+
+        @jax.jit
+        def _train_epoch(shuffle_key):
+
+            obs = jax.random.permutation(shuffle_key, self.data, axis=0)
+            labels = jax.random.permutation(shuffle_key, self.targets, axis=0)
+
+            return State(obs=obs, labels=labels)
+
+        self.train_epoch = _train_epoch
+
+       
 class SHD_loader():
     """
     Dataloading wrapper for the Spiking Heidelberg Dataset. The entire dataset is loaded to vRAM in a temporally compressed format. The user must
